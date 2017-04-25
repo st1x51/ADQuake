@@ -5388,7 +5388,7 @@ void CheckNewDspPresets( void )
 	int	iroomtype = dsp_room_type.value;
 	int	iroom;
 
-	if( sv_player->v.waterlevel  > 2 )
+	if(sv.active && sv_player->v.waterlevel  > 2 )
 		iroom = 15;
 	else if( key_dest == key_menu )
 		iroom = 0;

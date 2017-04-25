@@ -1167,12 +1167,12 @@ void SX_RoomFX(int endtime, int fFilter, int fTimefx)
 		return;
 
 	fReset = 0;
-
-	if ( sv_player->v.waterlevel > 2 )
-		roomType = sxroomwater_type.value;
-	else if (key_dest == key_menu)
+	
+	if (key_dest == key_menu)
 		roomType = 0;
-	else
+	else if (sv.active && sv_player->v.waterlevel > 2 )
+		roomType = sxroomwater_type.value;
+	else 
 	    roomType = sxroom_type.value;
 
 	// only process legacy roomtypes here
