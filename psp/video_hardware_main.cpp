@@ -109,6 +109,11 @@ cvar_t	r_tex_res          = {"r_tex_res",          "0",   qtrue};
 cvar_t	r_particles_simple = {"r_particles_simple", "0",   qtrue};
 cvar_t	gl_keeptjunctions  = {"gl_keeptjunctions",  "0"         };
 
+cvar_t	r_showtris            = {"r_showtris",                "0"};
+cvar_t  r_asynch              = {"r_asynch",                  "0"};
+cvar_t  r_ipolations          = {"r_ipolations",              "0"};
+cvar_t  r_i_model_animation   = {"r_i_model_animation",       "1",qtrue}; // Toggle smooth model animation
+cvar_t  r_i_model_transform   = {"r_i_model_transform",       "1",qtrue}; // Toggle smooth model movement
 	
 /*
 cvar_t	gl_finish = {"gl_finish","0"};
@@ -467,7 +472,15 @@ float	r_avertexnormal_dots[SHADEDOT_QUANT][256] =
 
 float	*shadedots = r_avertexnormal_dots[0];
 
+// fenix@io.com: model animation interpolation
+int lastposenum0;
+//
+
 int	lastposenum;
+
+// fenix@io.com: model transform interpolation
+float old_i_model_transform;
+//
 
 /*
 =============
@@ -475,7 +488,7 @@ GL_DrawAliasFrame
 =============
 */
 extern vec3_t lightcolor; // LordHavoc: .lit support
-void GL_DrawAliasFrame (aliashdr_t *paliashdr, int posenum)
+void GL_DrawAliasFrame (aliashdr_t *paliashdr, int posenum, float apitch, float ayaw)
 {
 	float 	l;
 	trivertx_t	*verts;
@@ -551,6 +564,219 @@ lastposenum = posenum;
 
 /*
 =============
+GL_DrawAliasBlendedFrame
+
+fenix@io.com: model animation interpolation
+=============
+*/
+void GL_DrawAliasBlendedFrame (aliashdr_t *paliashdr, int pose1, int pose2, float blend, float apitch, float ayaw)
+{
+	float       l;
+    trivertx_t* verts1;
+	trivertx_t* verts2;
+	int*        order;
+	int         count, brightness;
+	vec3_t      d;
+	vec3_t       point;
+
+	lastposenum0 = pose1;
+	lastposenum  = pose2;
+
+	verts1 = (trivertx_t *)((byte *)paliashdr + paliashdr->posedata);
+	verts2 = verts1;
+
+	verts1 += pose1 * paliashdr->poseverts;
+	verts2 += pose2 * paliashdr->poseverts;
+
+	order = (int *)((byte *)paliashdr + paliashdr->commands);
+	
+	while (1)
+	{
+       // get the vertex count and primitive type
+		int prim;
+		count = *order++;
+
+		if (!count) break;
+
+		if (count < 0)
+        {
+			count = -count;
+            prim = GU_TRIANGLE_FAN;
+		}
+		else
+		{
+		    prim = GU_TRIANGLE_STRIP;;
+		}
+
+		// Allocate the vertices.
+		struct vertex
+		{
+			float u, v;
+			unsigned int color;
+			float x, y, z;
+		};
+
+		vertex* const out = static_cast<vertex*>(sceGuGetMemory(sizeof(vertex) * count));
+
+		for (int vertex_index = 0; vertex_index < count; ++vertex_index)
+		{
+            
+			// texture coordinates come from the draw list
+			out[vertex_index].u = ((float *)order)[0];
+			out[vertex_index].v = ((float *)order)[1];
+
+			order += 2;
+			d[0] = shadedots[verts2->lightnormalindex] - shadedots[verts1->lightnormalindex];
+            l = shadedots[verts1->lightnormalindex] + (blend * d[0]);
+
+            float       r,g,b;
+
+			r = l * lightcolor[0];
+            g = l * lightcolor[1];
+            b = l * lightcolor[2];
+
+             if(r > 1)
+				r = 1;
+			 if(g > 1)
+				g = 1;
+			 if(b > 1)
+				b = 1;
+
+			VectorSubtract(verts2->v, verts1->v, d);
+
+			// blend the vertex positions from each frame together
+			point[0] = verts1->v[0] + (blend * d[0]);
+			point[1] = verts1->v[1] + (blend * d[1]);
+			point[2] = verts1->v[2] + (blend * d[2]);
+			
+		    out[vertex_index].x = point[0];
+            out[vertex_index].y = point[1];
+            out[vertex_index].z = point[2];
+            out[vertex_index].color = GU_COLOR(r, g, b, 1.0f);
+            
+            verts1++;
+            verts2++;
+		}
+		
+        if(r_showtris.value)
+		{
+		   sceGuDisable(GU_TEXTURE_2D);
+		}
+		sceGuDrawArray(r_showtris.value ? GU_LINE_STRIP : prim, GU_TEXTURE_32BITF | GU_VERTEX_32BITF | GU_COLOR_8888, count, 0, out);
+        if(r_showtris.value)
+		{
+		   sceGuEnable(GU_TEXTURE_2D);
+		}
+		
+	}
+	sceGuColor(0xffffffff);
+}
+
+/*
+=============
+GL_DrawAliasInterpolatedFrame
+=============
+*/
+void GL_DrawAliasInterpolatedFrame (aliashdr_t *paliashdr, int posenum, int oldposenum, int interp)
+{
+   float s, t;
+   float  l;
+   float interpolations;
+   int  i, j;
+   int  index;
+   trivertx_t *v, *verts, *oldverts;
+   int  list;
+   int  *order;
+   vec3_t point;
+   float *normal;
+   int  count;
+
+   lastposenum = posenum;
+   interpolations = interp/r_ipolations.value;
+   verts = (trivertx_t *)((byte *)paliashdr + paliashdr->posedata);
+   oldverts = verts;
+   verts += posenum * paliashdr->poseverts;
+   if (oldposenum >= 0)
+      oldverts += oldposenum * paliashdr->poseverts;
+   else
+      oldverts += posenum * paliashdr->poseverts;
+
+   order = (int *)((byte *)paliashdr + paliashdr->commands);
+
+   while (1)
+      {
+        // get the vertex count and primitive type
+        int prim;
+		count = *order++;
+
+		if (!count)
+		break;
+
+		if (count < 0)
+        {
+			count = -count;
+            prim = GU_TRIANGLE_FAN;
+		}
+		else
+		{
+		    prim = GU_TRIANGLE_STRIP;;
+		}
+
+		// Allocate the vertices.
+		struct vertex
+		{
+			float u, v;
+			unsigned int color;
+			float x, y, z;
+		};
+
+		vertex* const out = static_cast<vertex*>(sceGuGetMemory(sizeof(vertex) * count));
+
+		for (int vertex_index = 0; vertex_index < count; ++vertex_index)
+        {
+         // texture coordinates come from the draw list
+     	 out[vertex_index].u = ((float *)order)[0];
+		 out[vertex_index].v = ((float *)order)[1];
+         order += 2;
+         // normals and vertexes come from the frame list
+         l = shadedots[verts->lightnormalindex];
+         float       r,g,b;
+
+			r = l * lightcolor[0];
+            g = l * lightcolor[1];
+            b = l * lightcolor[2];
+             if(r > 1)
+				r = 1;
+			 if(g > 1)
+				g = 1;
+			 if(b > 1)
+				b = 1;
+
+		 out[vertex_index].x = oldverts->v[0] + ((verts->v[0] - oldverts->v[0])*interpolations);
+         out[vertex_index].y = oldverts->v[1] + ((verts->v[1] - oldverts->v[1])*interpolations);
+         out[vertex_index].z = oldverts->v[2] + ((verts->v[2] - oldverts->v[2])*interpolations);
+
+         out[vertex_index].color = GU_COLOR(r, g, b, 1.0f);
+
+		 verts++;
+         oldverts++;
+		 }
+		 
+         if(r_showtris.value)
+		 {
+		   sceGuDisable(GU_TEXTURE_2D);
+		 }
+		 sceGuDrawArray(r_showtris.value ? GU_LINE_STRIP : prim, GU_TEXTURE_32BITF | GU_VERTEX_32BITF | GU_COLOR_8888, count, 0, out);
+         if(r_showtris.value)
+		 {
+		   sceGuEnable(GU_TEXTURE_2D);
+		 }
+		 
+	  }
+	  sceGuColor(0xffffffff);
+}
+/*
+=============
 GL_DrawAliasShadow
 =============
 */
@@ -615,7 +841,135 @@ void GL_DrawAliasShadow (aliashdr_t *paliashdr, int posenum)
 	}	*/
 }
 
+/*
+=============
+GL_DrawAliasBlendedShadow
 
+fenix@io.com: model animation interpolation
+=============
+*/
+void GL_DrawAliasBlendedShadow (aliashdr_t *paliashdr, int pose1, int pose2, entity_t* e)
+{
+    trivertx_t* verts1;
+    trivertx_t* verts2;
+    int*        order;
+    vec3_t      point1;
+    vec3_t      point2;
+    vec3_t      d;
+    float       height;
+    float       lheight;
+    int         count;
+    float       blend;
+
+	// Tomaz - New Shadow Begin
+	trace_t		downtrace;
+	vec3_t		downmove;
+	float		s1,c1;
+	// Tomaz - New Shadow End
+
+    blend = (realtime - e->frame_start_time) / e->frame_interval;
+
+    if (blend > 1) blend = 1;
+
+    lheight = e->origin[2] - lightspot[2];
+    height  = -lheight; // Tomaz - New Shadow
+
+	// Tomaz - New Shadow Begin
+	VectorCopy (e->origin, downmove);
+	downmove[2] = downmove[2] - 4096;
+	memset (&downtrace, 0, sizeof(downtrace));
+	SV_RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, e->origin, downmove, &downtrace);
+
+	s1 = sin( e->angles[1]/180*M_PI);
+	c1 = cos( e->angles[1]/180*M_PI);
+	// Tomaz - New Shadow End
+
+    verts1 = (trivertx_t *)((byte *)paliashdr + paliashdr->posedata);
+    verts2 = verts1;
+
+    verts1 += pose1 * paliashdr->poseverts;
+    verts2 += pose2 * paliashdr->poseverts;
+
+    order = (int *)((byte *)paliashdr + paliashdr->commands);
+
+    for (;;)
+    {
+        // get the vertex count and primitive type
+        count = *order++;
+
+        if (!count)
+		break;
+
+        int prim;
+		if (count < 0)
+		{
+		 count = -count;
+		 prim = GU_TRIANGLE_FAN;
+		}
+		else
+		{
+		 prim = GU_TRIANGLE_STRIP;
+		}
+
+		// Allocate the vertices.
+		struct vertex
+		{
+			float x, y, z;
+		};
+
+		vertex* const out = static_cast<vertex*>(sceGuGetMemory(sizeof(vertex) * count));
+
+		for (int vertex_index = 0; vertex_index < count; ++vertex_index)
+		{
+                order += 2;
+
+                point1[0] = verts1->v[0] * paliashdr->scale[0] + paliashdr->scale_origin[0];
+                point1[1] = verts1->v[1] * paliashdr->scale[1] + paliashdr->scale_origin[1];
+                point1[2] = verts1->v[2] * paliashdr->scale[2] + paliashdr->scale_origin[2];
+
+
+
+                point2[0] = verts2->v[0] * paliashdr->scale[0] + paliashdr->scale_origin[0];
+                point2[1] = verts2->v[1] * paliashdr->scale[1] + paliashdr->scale_origin[1];
+                point2[2] = verts2->v[2] * paliashdr->scale[2] + paliashdr->scale_origin[2];
+
+
+                VectorSubtract(point2, point1, d);
+
+				// Tomaz - New shadow Begin
+				point1[0] = point1[0] + (blend * d[0]);
+				point1[1] = point1[1] + (blend * d[1]);
+				point1[2] = point1[2] + (blend * d[2]);
+
+				point1[2] =  - (e->origin[2] - downtrace.endpos[2]);
+
+				point1[2] += ((point1[1] * (s1 * downtrace.plane.normal[0])) -
+							  (point1[0] * (c1 * downtrace.plane.normal[0])) -
+							  (point1[0] * (s1 * downtrace.plane.normal[1])) -
+							  (point1[1] * (c1 * downtrace.plane.normal[1]))) +
+							  ((1.0 - downtrace.plane.normal[2])*20) + 0.2 ;
+
+				out[vertex_index].x = point1[0];
+                out[vertex_index].y = point1[1] ;
+                out[vertex_index].z = point1[2];
+				// Tomaz - New shadow Begin
+
+                verts1++;
+                verts2++;
+        }
+		
+        if(r_showtris.value)
+		{
+		   sceGuDisable(GU_TEXTURE_2D);
+		}
+		sceGuDrawArray(r_showtris.value ? GU_LINE_STRIP : prim,GU_VERTEX_32BITF, count, 0, out);
+        if(r_showtris.value)
+		{
+		   sceGuEnable(GU_TEXTURE_2D);
+		}
+		
+    }
+}
 
 /*
 =================
@@ -623,7 +977,7 @@ R_SetupAliasFrame
 
 =================
 */
-void R_SetupAliasFrame (int frame, aliashdr_t *paliashdr)
+void R_SetupAliasFrame (int frame, aliashdr_t *paliashdr, float apitch, float ayaw)
 {
 	int				pose, numposes;
 	float			interval;
@@ -643,10 +997,110 @@ void R_SetupAliasFrame (int frame, aliashdr_t *paliashdr)
 		pose += (int)(cl.time / interval) % numposes;
 	}
 
-	GL_DrawAliasFrame (paliashdr, pose);
+	GL_DrawAliasFrame (paliashdr, pose, apitch, ayaw);
 }
 
+/*
+=================
+R_SetupAliasBlendedFrame
 
+fenix@io.com: model animation interpolation
+=================
+*/
+void R_SetupAliasBlendedFrame (int frame, aliashdr_t *paliashdr, entity_t* e, float apitch, float ayaw)
+{
+	int   pose;
+	int   numposes;
+	float blend;
+
+	if ((frame >= paliashdr->numframes) || (frame < 0))
+	{
+		Con_DPrintf ("R_AliasSetupFrame: no such frame %d\n", frame);
+		frame = 0;
+	}
+
+	pose = paliashdr->frames[frame].firstpose;
+	numposes = paliashdr->frames[frame].numposes;
+
+	if (numposes > 1)
+	{
+  		e->frame_interval = paliashdr->frames[frame].interval;
+  		pose += (int)(cl.time / e->frame_interval) % numposes;
+  	}
+    else
+    {
+		/* One tenth of a second is a good for most Quake animations.
+		If the nextthink is longer then the animation is usually meant to pause
+		(e.g. check out the shambler magic animation in shambler.qc).  If its
+		shorter then things will still be smoothed partly, and the jumps will be
+		less noticable because of the shorter time.  So, this is probably a good
+		assumption. */
+		e->frame_interval = 0.1;
+	}
+
+	if (e->pose2 != pose)
+	{
+		e->frame_start_time = realtime;
+		e->pose1 = e->pose2;
+		e->pose2 = pose;
+		blend = 0;
+	}
+	else
+	{
+		blend = (realtime - e->frame_start_time) / e->frame_interval;
+	}
+
+	// wierd things start happening if blend passes 1
+	if (cl.paused || blend > 1) blend = 1;
+
+	if (blend == 1)
+        GL_DrawAliasFrame (paliashdr, pose, apitch, ayaw);
+    else
+        GL_DrawAliasBlendedFrame (paliashdr, e->pose1, e->pose2, blend, apitch, ayaw);
+}
+
+/*
+=================
+R_SetupAliasInterpolatedFrame
+=================
+*/
+void R_SetupAliasInterpolatedFrame (int frame, int lastframe, float interp, aliashdr_t *paliashdr)
+{
+   int   pose, numposes, oldpose;
+   float   interval;
+
+	if ((frame >= paliashdr->numframes) || (frame < 0))
+    {
+      Con_DPrintf ("R_AliasSetupFrame: no such frame %d\n", frame);
+      frame = 0;
+    }
+
+	if ((lastframe >= paliashdr->numframes) || (lastframe < 0))
+    {
+      Con_DPrintf ("R_AliasSetupFrame: no such last frame %d\n", lastframe);
+      lastframe = 0;
+    }
+
+	pose = paliashdr->frames[frame].firstpose;
+    numposes = paliashdr->frames[frame].numposes;
+
+	if (numposes > 1)
+    {
+      interval = paliashdr->frames[frame].interval;
+      pose += (int)(cl.time / interval) % numposes;
+    }
+
+    oldpose = paliashdr->frames[lastframe].firstpose;
+    numposes = paliashdr->frames[lastframe].numposes;
+
+	if (numposes > 1)
+    {
+      interval = paliashdr->frames[lastframe].interval;
+      oldpose += (int)(cl.time / interval) % numposes;
+    }
+
+   GL_DrawAliasInterpolatedFrame (paliashdr, pose, oldpose, interp);
+}
 
 /*
 =================
@@ -805,7 +1259,10 @@ void R_DrawAliasModel (entity_t *e)
 	//
 	sceGumPushMatrix();
 
-	R_RotateForEntity (e);
+	if (r_i_model_transform.value)
+	    R_BlendedRotateForEntity (e, 0);
+	else
+		R_RotateForEntity (e, 0);
 
 	const ScePspFVector3 translation =
 	{
@@ -843,6 +1300,40 @@ void R_DrawAliasModel (entity_t *e)
 	sceGumUpdateMatrix();
 
 	R_SetupAliasFrame (currententity->frame, paliashdr);
+	if (r_i_model_animation.value)
+	{
+		R_SetupAliasBlendedFrame (currententity->frame, paliashdr, currententity, e->angles[0], e->angles[1]);
+	}
+	else
+	{
+		if (r_ipolations.value)
+		{
+		   if (r_asynch.value)
+		   {
+			 if (currententity->interpolation >= r_ipolations.value)
+			 {
+			 currententity->last_frame = currententity->current_frame;
+			 currententity->current_frame = currententity->frame;
+			 currententity->interpolation = 1;
+			 }
+		   }
+		   else
+		   {
+			if (currententity->frame != currententity->current_frame)
+			{
+			 currententity->last_frame = currententity->current_frame;
+			 currententity->current_frame = currententity->frame;
+			 currententity->interpolation = 1;
+			}
+		  }
+		  R_SetupAliasInterpolatedFrame (currententity->current_frame,
+										 currententity->last_frame,
+										 currententity->interpolation,
+										 paliashdr);
+		}
+		else
+		 R_SetupAliasFrame (currententity->frame, paliashdr, e->angles[0], e->angles[1]);
+	}
 	
 	sceGuShadeModel(GU_FLAT);
 	sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGB);
@@ -851,13 +1342,45 @@ void R_DrawAliasModel (entity_t *e)
 
 	if (r_shadows.value)
 	{
+		// Tomaz - New Shadow Begin
+		trace_t		downtrace;
+		vec3_t		downmove;
+		// Tomaz - New Shadow End
+
 		sceGumPushMatrix();
-		R_RotateForEntity (e);
-		
-		GL_DrawAliasShadow (paliashdr, lastposenum);
-	
+
+		if (r_i_model_transform.value)
+	        R_BlendedRotateForEntity (e, 1);
+	    else
+			R_RotateForEntity (e, 1);
+
+		VectorCopy (e->origin, downmove);
+
+		downmove[2] = downmove[2] - 4096;
+		memset (&downtrace, 0, sizeof(downtrace));
+		SV_RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, e->origin, downmove, &downtrace);
+
+		sceGuDisable (GU_TEXTURE_2D);
+		sceGuEnable (GU_BLEND);
+		sceGuDepthMask(GU_TRUE); // disable zbuffer updates
+		sceGuColor(GU_COLOR(0,0,0,(1 - ((mins[2]-downtrace.endpos[2])/60))));
+
+		//stencil shadows
+		sceGuEnable(GU_STENCIL_TEST);
+		sceGuStencilFunc(GU_EQUAL,1,2);
+		sceGuStencilOp(GU_KEEP,GU_KEEP,GU_INCR);
+		if (r_i_model_animation.value)
+		   GL_DrawAliasBlendedShadow (paliashdr, lastposenum0, lastposenum, currententity);
+		else
+		   GL_DrawAliasShadow (paliashdr, lastposenum);
+		sceGuDisable(GU_STENCIL_TEST);
+
 		sceGumPopMatrix();
 		sceGumUpdateMatrix();
+		sceGuColor(0xffffffff);
+		sceGuDepthMask(GU_FALSE); // enable zbuffer updates
+		sceGuEnable (GU_TEXTURE_2D);
+		sceGuDisable (GU_BLEND);
 	}
 
 }
@@ -928,6 +1451,10 @@ void R_DrawViewModel (void)
 	dlight_t	*dl;
 	int			ambientlight, shadelight;
 */
+
+
+	float old_i_model_transform;
+	
 	if (!r_drawviewmodel.value)
 		return;
 
@@ -984,8 +1511,29 @@ void R_DrawViewModel (void)
 #endif
 	// hack the depth range to prevent view model from poking into walls
 	sceGuDepthRange(0, 19660);
-	R_DrawAliasModel (currententity);
+    switch (currententity->model->type)
+	{
+	case mod_alias:
+		// fenix@io.com: model transform interpolation
+        old_i_model_transform = r_i_model_transform.value;
+        r_i_model_transform.value = false;
+        R_DrawAliasModel (currententity);
+        r_i_model_transform.value = old_i_model_transform;
+		break;
+
+	case mod_halflife:
+		R_DrawHLModel (currententity);
+		break;
+	default:
+		Con_Printf("Not drawing view model of type %i\n", currententity->model->type);
+		break;
+	}
+	//sceGuDepthRange(0, 19660);
+	//R_DrawAliasModel (currententity);
 	sceGuDepthRange(0, 65535);
+
+//	sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+   // sceGuDisable(GU_BLEND);
 }
 
 

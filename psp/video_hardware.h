@@ -191,6 +191,11 @@ extern  cvar_t	r_mipmaps;
 extern  cvar_t	r_mipmaps_func;
 extern  cvar_t	r_mipmaps_bias;
 
+extern  cvar_t  r_i_model_animation;
+extern  cvar_t  r_i_model_transform;
+extern  cvar_t  r_ipolations;
+extern  cvar_t  r_asynch;
+extern  cvar_t  r_showtris;
 extern	cvar_t	gl_keeptjunctions;
 
 extern	int			mirrortexturenum;	// quake texturenum, not gltexturenum

@@ -224,6 +224,10 @@ void R_Init (void)
 	Cvar_RegisterVariable (&r_mipmaps_func);
 	Cvar_RegisterVariable (&r_mipmaps_bias);
 	
+	Cvar_RegisterVariable (&r_i_model_animation);
+    Cvar_RegisterVariable (&r_i_model_transform);
+	Cvar_RegisterVariable (&r_ipolations);
+	Cvar_RegisterVariable (&r_asynch);
 	Cvar_RegisterVariable (&gl_keeptjunctions);
 /*
 	Cvar_RegisterVariable (&gl_finish);
