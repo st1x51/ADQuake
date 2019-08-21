@@ -353,6 +353,8 @@ int PR_LeaveFunction (void)
 }
 
 
+#define RUNAWAY	     10000000	 
+
 /*
 ====================
 PR_ExecuteProgram
@@ -369,6 +371,10 @@ void PR_ExecuteProgram (func_t fnum)
 	edict_t	*ed;
 	int		exitdepth;
 	eval_t	*ptr;
+// 2001-09-14 Enhanced BuiltIn Function System (EBFS) by Maddes  start
+	char	*funcname;
+	char	*remaphint;
+// 2001-09-14 Enhanced BuiltIn Function System (EBFS) by Maddes  end
 
 	if (!fnum || fnum >= progs->numfunctions)
 	{
@@ -379,7 +385,9 @@ void PR_ExecuteProgram (func_t fnum)
 	
 	f = &pr_functions[fnum];
 
-	runaway = 100000;
+	runaway = RUNAWAY;
+	if (runaway < 10000000)
+		runaway = 10000000;
 	pr_trace = false;
 
 // make a stack frame
@@ -626,8 +634,21 @@ while (1)
 		if (newf->first_statement < 0)
 		{	// negative statements are built in functions
 			i = -newf->first_statement;
-			if (i >= pr_numbuiltins)
-				PR_RunError ("Bad builtin call number");
+// 2001-09-14 Enhanced BuiltIn Function System (EBFS) by Maddes  start
+			if ( (i >= pr_numbuiltins)||(pr_builtins[i] == pr_ebfs_builtins[0].function) )
+			{
+				funcname = pr_strings + newf->s_name;
+				if (pr_builtin_remap.value)
+				{
+					remaphint = NULL;
+				}
+				else
+				{
+					remaphint = "Try \"builtin remapping\" by setting PR_BUILTIN_REMAP to 1\n";
+				}
+			PR_RunError ("Bad builtin call number %i for %s\n", i, funcname, remaphint);
+			}
+// 2001-09-14 Enhanced BuiltIn Function System (EBFS) by Maddes  end
 			pr_builtins[i] ();
 			break;
 		}
