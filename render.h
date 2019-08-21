@@ -56,8 +56,17 @@ typedef struct entity_s
 	byte					*colormap;
 	int						effects;		// light, particals, etc
 	int						skinnum;		// for Alias models
+	int 					sequence;
 	int						visframe;		// last frame this entity was
 											//  found in an active leaf
+	// fenix@io.com: model transform interpolation
+    float                   translate_start_time;
+    vec3_t                  origin1;
+    vec3_t                  origin2;
+
+    float                   rotate_start_time;
+    vec3_t                  angles1;
+    vec3_t                  angles2;									//  found in an active leaf
 											
 	int						dlightframe;	// dynamic lighting
 	int						dlightbits;
@@ -66,11 +75,41 @@ typedef struct entity_s
     float	                rendermode;
     vec3_t	                rendercolor;
 //New vars
+	float	bonecontrols[4];	
 // FIXME: could turn these into a union
+    // light lerping - pox@planetquake.com
+    float    last_shadelight;
+	int			health;
+   int               last_frame;
+   int               current_frame;
+   float             interpolation;
+
+   qboolean			noshadow;
+
+   int						keynum;
+
+
+   int						oldframe;
+   float					framelerp;
+
+    	// FIXME: could turn these into a union
 	int						trivial_accept;
 	struct mnode_s			*topnode;		// for bmodels, first world node
-											//  that splits bmodel, or NULL if
-											//  not split
+
+	int		modelindex;
+	vec3_t	trail_origin;
+	qboolean traildrawn;
+
+	float				lastShadeLight;
+
+	float                   frame_start_time;
+    float                   frame_interval;
+    int                     pose1;
+    int                     pose2;
+
+    // fenix@io.com: model transform interpolation
+    //  that splits bmodel, or NULL if
+    //  not split											//  not split
 } entity_t;
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!

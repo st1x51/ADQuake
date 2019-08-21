@@ -45,7 +45,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	U_RENDERCOLOR1	(1<<18)
 #define	U_RENDERCOLOR2	(1<<19)
 #define	U_RENDERCOLOR3	(1<<20)
-
+#define	U_SEQUENCE		(1<<21)
 
 
 #define	SU_VIEWHEIGHT	(1<<0)
@@ -63,6 +63,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	SU_WEAPONFRAME	(1<<12)
 #define	SU_ARMOR		(1<<13)
 #define	SU_WEAPON		(1<<14)
+#define	SU_SEQUENCE		(1<<15)
 
 // a sound with no channel is a local only sound
 #define	SND_VOLUME		(1<<0)		// a byte

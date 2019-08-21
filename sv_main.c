@@ -518,6 +518,9 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 			bits |= U_RENDERCOLOR3;
 
 //New vars
+		if (ent->baseline.sequence != ent->v.sequence)
+			bits |= U_SEQUENCE;
+		
 		if (ent->baseline.modelindex != ent->v.modelindex)
 			bits |= U_MODEL;
 
@@ -567,6 +570,8 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		if (bits & U_RENDERCOLOR3)
 			MSG_WriteCoord (msg, ent->v.rendercolor[2]);
 //New vars
+		if (bits & U_SEQUENCE)
+			MSG_WriteByte (msg, ent->v.sequence);
 		if (bits & U_ORIGIN1)
 			MSG_WriteCoord (msg, ent->v.origin[0]);		
 		if (bits & U_ANGLE1)
@@ -703,6 +708,9 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 
 //	if (ent->v.weapon)
 		bits |= SU_WEAPON;
+	
+	if (ent->v.sequence)
+		bits |= SU_SEQUENCE;
 
 // send the data
 
@@ -732,6 +740,8 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		MSG_WriteByte (msg, ent->v.armorvalue);
 	if (bits & SU_WEAPON)
 		MSG_WriteByte (msg, SV_ModelIndex(pr_strings+ent->v.weaponmodel));
+	if (bits & SU_SEQUENCE)
+		MSG_WriteByte (msg, ent->v.sequence);
 	
 	MSG_WriteShort (msg, ent->v.health);
 	MSG_WriteByte (msg, ent->v.currentammo);
@@ -989,6 +999,7 @@ void SV_CreateBaseline (void)
 		VectorCopy (svent->v.angles, svent->baseline.angles);
 		svent->baseline.frame = svent->v.frame;
 		svent->baseline.skin = svent->v.skin;
+		svent->baseline.sequence = svent->v.sequence;
 //New vars
 		svent->baseline.renderamt = svent->v.renderamt;
 		svent->baseline.rendermode = svent->v.rendermode;
@@ -1016,6 +1027,7 @@ void SV_CreateBaseline (void)
 		MSG_WriteByte (&sv.signon, svent->baseline.frame);
 		MSG_WriteByte (&sv.signon, svent->baseline.colormap);
 		MSG_WriteByte (&sv.signon, svent->baseline.skin);
+		MSG_WriteByte (&sv.signon, svent->baseline.sequence);
 //New vars
        MSG_WriteByte (&sv.signon, svent->baseline.renderamt);
        MSG_WriteByte (&sv.signon, svent->baseline.rendermode);
