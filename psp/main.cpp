@@ -72,9 +72,9 @@ namespace quake
 #else
 	#ifdef KERNEL_MODE
 		// How big a heap to allocate.
-		static size_t  heapSize	= 14 * 1024 * 1024;
+		static size_t  heapSize	= 23 * 1024 * 1024;
 	#else
-		static size_t  heapSize	= 14 * 1024 * 1024;
+		static size_t  heapSize	= 23 * 1024 * 1024;
 	#endif // KERNEL_MODE
 #endif // PSP_SOFTWARE_VIDEO
 

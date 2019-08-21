@@ -187,6 +187,55 @@ void GL_SubdivideSurface (msurface_t *fa)
 	SubdividePolygon (numverts, verts[0]);
 }
 
+/*
+================
+GL_Surface
+================
+*/
+void GL_Surface (msurface_t *fa)
+{
+	vec3_t		verts[64];
+	int			numverts;
+	int			i;
+	int			lindex;
+	float		*vec;
+	glpoly_t	*poly;
+//	float		texscale;
+	float	s, t;
+
+//	texscale = (1.0/32.0);
+
+	//
+	// convert edges back to a normal polygon
+	//
+	numverts = 0;
+	for (i=0 ; i<fa->numedges ; i++)
+	{
+		lindex = loadmodel->surfedges[fa->firstedge + i];
+
+		if (lindex > 0)
+			vec = loadmodel->vertexes[loadmodel->edges[lindex].v[0]].position;
+		else
+			vec = loadmodel->vertexes[loadmodel->edges[-lindex].v[1]].position;
+		VectorCopy (vec, verts[numverts]);
+		numverts++;
+	}
+
+	//create the poly
+	poly = static_cast<glpoly_t*>(Hunk_Alloc (sizeof(glpoly_t) + (numverts - 1) * sizeof(glvert_t)));
+	poly->next = NULL;
+	fa->polys = poly;
+	poly->numverts = numverts;
+	for (i=0, vec=(float *)verts; i<numverts; i++, vec+= 3)
+	{
+		VectorCopy (vec, poly->verts[i].xyz);
+		s = DotProduct(vec, fa->texinfo->vecs[0]);// * texscale;
+		t = DotProduct(vec, fa->texinfo->vecs[1]);// * texscale;
+		poly->verts[i].st[0] = s;
+		poly->verts[i].st[1] = t;
+	}
+}
+
 //=========================================================
 
 

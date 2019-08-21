@@ -218,6 +218,8 @@ void GL_BuildLightmaps (void);
 void GL_MakeAliasModelDisplayLists (model_t *m, aliashdr_t *hdr);
 void GL_Set2D (void);
 void GL_SubdivideSurface (msurface_t *fa);
+void GL_Surface (msurface_t *fa);
+
 void EmitWaterPolys (msurface_t *fa);
 void EmitSkyPolys (msurface_t *fa);
 void EmitBothSkyLayers (msurface_t *fa);
