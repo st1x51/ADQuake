@@ -64,6 +64,9 @@ cvar_t	teamplay = {"teamplay","0",false,true};
 cvar_t	samelevel = {"samelevel","0"};
 cvar_t	noexit = {"noexit","0",false,true};
 
+cvar_t	show_fps = {"show_fps","1"};	// set for running times - muff
+int			fps_count;
+
 #ifdef QUAKE2
 cvar_t	developer = {"developer","1"};	// should be 0 for release!
 #else
@@ -215,6 +218,7 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&serverprofile);
 
+	Cvar_RegisterVariable (&show_fps); // muff fps
 	Cvar_RegisterVariable (&fraglimit);
 	Cvar_RegisterVariable (&timelimit);
 	Cvar_RegisterVariable (&teamplay);
@@ -730,6 +734,7 @@ void _Host_Frame (float time)
 					pass1+pass2+pass3, pass1, pass2, pass3);
 	}
 	
+	fps_count++;//muff fps
 	host_framecount++;
 }
 
@@ -875,7 +880,7 @@ void Host_Init (quakeparms_t *parms)
 	NET_Init ();
 	SV_Init ();
 
-	Con_Printf ("PSP Quake1 v 1.1 (Exe: "__TIME__" "__DATE__")\n");
+	Con_Printf ("PSP ADquake (Exe: "__TIME__" "__DATE__")\n");
 	int currentCPU = scePowerGetCpuClockFrequency();
 	 
 #ifdef KERNEL_MODE
