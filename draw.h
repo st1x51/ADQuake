@@ -39,3 +39,4 @@ void Draw_FadeScreenColor (int r, int g, int b, int a);
 void Draw_String (int x, int y, char *str);
 qpic_t *Draw_PicFromWad (char *name);
 qpic_t *Draw_CachePic (char *path);
+void showimgpart (int x, int y, int px, int py, int w, int h, int texnum, int mode,unsigned int c);

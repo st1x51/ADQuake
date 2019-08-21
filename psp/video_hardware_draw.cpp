@@ -1996,3 +1996,52 @@ int GL_LoadTextureLM (const char *identifier, int width, int height, const byte 
 	// Done.
 	return texture_index;
 }
+void showimgpart (int x, int y, int px, int py, int w, int h, int texnum, int mode,unsigned int c)
+{
+    sceGuEnable(GU_BLEND);
+   // sceGuDisable(GU_FOG); //Crow_bar. (Don't affected on 2d transformation)
+    
+    if (mode == 0)
+	{
+	   sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE_MINUS_SRC_ALPHA, 0, 0);
+	   sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+    }
+	else if (mode == 1)
+	{
+       sceGuDepthMask(GU_TRUE);
+       sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_FIX, 0, 0xFFFFFFFF);
+       sceGuTexFunc(GU_TFX_MODULATE , GU_TCC_RGB);
+    }
+   
+	GL_Bind (texnum);
+
+	struct vertex
+	{
+		short u, v;
+		short x, y, z;
+	};
+
+	vertex* const vertices = static_cast<vertex*>(sceGuGetMemory(sizeof(vertex) * 2));
+
+	vertices[0].u = px;
+	vertices[0].v = py;
+	vertices[0].x = x;
+	vertices[0].y = y;
+	vertices[0].z = 0;
+
+	vertices[1].u = px + w;
+	vertices[1].v = py + h;
+	vertices[1].x = x + w;
+	vertices[1].y = y + h;
+	vertices[1].z = 0;
+	sceGuColor(c);
+
+	sceGuDrawArray(GU_SPRITES, GU_TEXTURE_16BIT | GU_VERTEX_16BIT | GU_TRANSFORM_2D, 2, 0, vertices);
+	
+	sceGuDepthMask(GU_FALSE);
+	//sceGuDisable(GU_BLEND);
+	sceGuColor(0xffffffff);
+	//sceGuEnable(GU_FOG); //Crow_bar. (Don't affected on 2d transformation)
+	sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+	sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE_MINUS_SRC_ALPHA, 0, 0);
+}
