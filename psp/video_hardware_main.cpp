@@ -1299,7 +1299,7 @@ void R_DrawAliasModel (entity_t *e)
 	
 	sceGumUpdateMatrix();
 
-	R_SetupAliasFrame (currententity->frame, paliashdr);
+   // fenix@io.com: model animation interpolation
 	if (r_i_model_animation.value)
 	{
 		R_SetupAliasBlendedFrame (currententity->frame, paliashdr, currententity, e->angles[0], e->angles[1]);
@@ -1384,7 +1384,48 @@ void R_DrawAliasModel (entity_t *e)
 	}
 
 }
-
+/*
+=============
+R_DrawNullModel
+From pspq2
+=============
+*/
+void R_DrawNullModel(void)
+{
+	R_LightPoint(currententity->origin);
+	sceGumPushMatrix();
+	sceGuDisable(GU_TEXTURE_2D);
+    sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
+	sceGuShadeModel (GU_SMOOTH);
+	R_RotateForEntity(currententity, 0);
+	typedef struct VERT_t
+	{
+		float x, y, z;
+	} VERT;
+	VERT* v;
+	sceGuColor(0x0099FF);
+	v = (VERT*)sceGuGetMemory(sizeof(VERT) * 6);
+	v[0].x =  0.0f; v[0].y =  0.0f; v[0].z =  9.0f;
+	v[1].x =  9.0f; v[1].y =  0.0f; v[1].z =  0.0f;
+	v[2].x =  0.0f; v[2].y = -9.0f; v[2].z =  0.0f;
+	v[3].x = -9.0f; v[3].y =  0.0f; v[3].z =  0.0f;
+	v[4].x =  0.0f; v[4].y =  9.0f; v[4].z =  0.0f;
+	v[5].x =  9.0f; v[5].y =  0.0f; v[5].z =  0.0f;
+	sceGumDrawArray(r_showtris.value ? GU_LINE_STRIP : GU_TRIANGLE_FAN, GU_VERTEX_32BITF | GU_TRANSFORM_3D, 6, 0, v);
+	sceGuColor(0x0000FF);
+	v = (VERT*)sceGuGetMemory(sizeof(VERT) * 6);
+	v[0].x =  0.0f; v[0].y =  0.0f; v[0].z = -9.0f;
+	v[1].x =  9.0f; v[1].y =  0.0f; v[1].z =  0.0f;
+	v[2].x =  0.0f; v[2].y =  9.0f; v[2].z =  0.0f;
+	v[3].x = -9.0f; v[3].y =  0.0f; v[3].z =  0.0f;
+	v[4].x =  0.0f; v[4].y = -9.0f; v[4].z =  0.0f;
+	v[5].x =  9.0f; v[5].y =  0.0f; v[5].z =  0.0f;
+	sceGumDrawArray(r_showtris.value ? GU_LINE_STRIP : GU_TRIANGLE_FAN, GU_VERTEX_32BITF | GU_TRANSFORM_3D, 6, 0, v);
+	sceGuTexFunc(GU_TFX_REPLACE , GU_TCC_RGBA);
+	sceGuColor(0xFFFFFF);
+	sceGuEnable(GU_TEXTURE_2D);
+	sceGumPopMatrix();
+}
 //==================================================================================
 
 /*
@@ -1403,6 +1444,16 @@ void R_DrawEntitiesOnList (void)
 	for (i=0 ; i<cl_numvisedicts ; i++)
 	{
 		currententity = cl_visedicts[i];
+
+		if (currententity == &cl_entities[cl.viewentity])
+	       currententity->angles[0] *= 0.3;
+
+        //currentmodel = currententity->model;
+		if(!(currententity->model))
+		{
+			R_DrawNullModel();
+			continue;
+		}
 
 		switch (currententity->model->type)
 		{
