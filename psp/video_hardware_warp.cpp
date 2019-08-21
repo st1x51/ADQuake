@@ -1111,7 +1111,7 @@ void R_InitSky (byte *mt)
 	}
 
 	if (solidskytexture == -1)
-		solidskytexture = GL_LoadTexture("", 128, 128, trans, 1, qfalse, GU_LINEAR, 0);
+		solidskytexture = loadtextureimage("textures/solidskytexture.tga", 0, 0, qfalse, GU_LINEAR);
 
 	for (int i=0 ; i<128 ; i++)
 	{
@@ -1126,6 +1126,6 @@ void R_InitSky (byte *mt)
 	}
 
 	if (alphaskytexture == -1)
-		alphaskytexture = GL_LoadTexture("", 128, 128, trans, 1, qfalse, GU_LINEAR, 0);
+		alphaskytexture = loadtextureimage("textures/alphaskytexture.tga", 0, 0, qfalse, GU_LINEAR);
 }
 
