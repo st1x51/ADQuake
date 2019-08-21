@@ -466,6 +466,50 @@ static inline void DrawGLPoly (glpoly_t *p)
 	}
 }
 
+static inline void DrawTrisPoly (glpoly_t *p) //Crow_bar
+{
+    sceGuDisable(GU_TEXTURE_2D);
+	// Does this poly need clipped?
+	const int				unclipped_vertex_count	= p->numverts;
+	const glvert_t* const	unclipped_vertices		= p->verts;
+	if (clipping::is_clipping_required(
+		unclipped_vertices,
+		unclipped_vertex_count))
+	{
+		// Clip the polygon.
+		const glvert_t*	clipped_vertices;
+		std::size_t		clipped_vertex_count;
+		clipping::clip(
+			unclipped_vertices,
+			unclipped_vertex_count,
+			&clipped_vertices,
+			&clipped_vertex_count);
+
+		// Did we have any vertices left?
+		if (clipped_vertex_count)
+		{
+			// Copy the vertices to the display list.
+			const std::size_t buffer_size = clipped_vertex_count * sizeof(glvert_t);
+			glvert_t* const display_list_vertices = static_cast<glvert_t*>(sceGuGetMemory(buffer_size));
+			memcpy(display_list_vertices, clipped_vertices, buffer_size);
+
+			// Draw the clipped vertices.
+			sceGuDrawArray(
+				GU_LINE_STRIP,
+				GU_TEXTURE_32BITF | GU_VERTEX_32BITF,
+				clipped_vertex_count, 0, display_list_vertices);
+		}
+	}
+	else
+	{
+		// Draw the poly directly.
+		sceGuDrawArray(
+			GU_LINE_STRIP,
+			GU_TEXTURE_32BITF | GU_VERTEX_32BITF,
+			unclipped_vertex_count, 0, unclipped_vertices);
+	}
+    sceGuEnable(GU_TEXTURE_2D);
+}
 
 static void DrawGLWaterPoly (glpoly_t *p)
 {
@@ -604,6 +648,15 @@ void R_RenderBrushPoly (msurface_t *fa)
 	int smax, tmax;
 
 	c_brush_polys++;
+	
+	if(r_showtris.value) //Crow_bar
+	{
+		sceGuDepthMask (GU_TRUE);
+
+		DrawTrisPoly (fa->polys);
+		
+		sceGuDepthMask (GU_FALSE);
+	}
 
 	if (fa->flags & SURF_DRAWSKY)
 	{	// warp texture, no lightmaps
@@ -692,6 +745,15 @@ void R_RenderDynamicLightmaps (msurface_t *fa)
 
 	c_brush_polys++;
 
+	if(r_showtris.value) //Crow_bar
+	{
+		sceGuDepthMask (GU_TRUE);
+
+		DrawTrisPoly (fa->polys);
+
+        sceGuDepthMask (GU_FALSE);
+	}
+	
 	if( fa->flags & SURF_DRAWTILED )
 		return;
 		

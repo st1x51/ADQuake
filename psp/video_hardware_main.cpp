@@ -114,6 +114,7 @@ cvar_t  r_asynch              = {"r_asynch",                  "0"};
 cvar_t  r_ipolations          = {"r_ipolations",              "0"};
 cvar_t  r_i_model_animation   = {"r_i_model_animation",       "1",qtrue}; // Toggle smooth model animation
 cvar_t  r_i_model_transform   = {"r_i_model_transform",       "1",qtrue}; // Toggle smooth model movement
+cvar_t  r_maxrange            = {"r_maxrange",             "4096"}; //render distance
 	
 /*
 cvar_t	gl_finish = {"gl_finish","0"};
@@ -148,21 +149,138 @@ qboolean R_CullBox (vec3_t mins, vec3_t maxs)
 	return qfalse;
 }
 
-void R_RotateForEntity (entity_t *e)
+void R_RotateForEntity (entity_t *e, int shadow)
 {
 	// Translate.
-	const ScePspFVector3 translation = {
+	const ScePspFVector3 translation =
+	{
 		e->origin[0], e->origin[1], e->origin[2]
 	};
 	sceGumTranslate(&translation);
+/*
+	// Scale.
+    const ScePspFVector3 scale =
+	{
+	e->scale, e->scale, e->scale
+	};
+	sceGumScale(&scale);
+*/
 
 	// Rotate.
-	const ScePspFVector3 rotation = {
-		e->angles[ROLL] * (GU_PI / 180.0f),
-		-e->angles[PITCH] * (GU_PI / 180.0f),
-		e->angles[YAW] * (GU_PI / 180.0f)
-	};
-	sceGumRotateZYX(&rotation);
+    sceGumRotateZ(e->angles[YAW] * (GU_PI / 180.0f));
+	if (shadow == 0)
+	{
+		sceGumRotateY (-e->angles[PITCH] * (GU_PI / 180.0f));
+		sceGumRotateX (e->angles[ROLL] * (GU_PI / 180.0f));
+	}
+
+	sceGumUpdateMatrix();
+}
+
+/*
+=============
+R_BlendedRotateForEntity
+
+fenix@io.com: model transform interpolation
+=============
+*/
+void R_BlendedRotateForEntity (entity_t *e, int shadow)	// Tomaz - New Shadow
+{
+    float timepassed;
+    float blend;
+    vec3_t d;
+    int i;
+
+    // positional interpolation
+
+    timepassed = realtime - e->translate_start_time;
+
+    if (e->translate_start_time == 0 || timepassed > 1)
+    {
+        e->translate_start_time = realtime;
+        VectorCopy (e->origin, e->origin1);
+        VectorCopy (e->origin, e->origin2);
+    }
+
+    if (!VectorCompare (e->origin, e->origin2))
+    {
+        e->translate_start_time = realtime;
+        VectorCopy (e->origin2, e->origin1);
+        VectorCopy (e->origin,  e->origin2);
+        blend = 0;
+    }
+    else
+    {
+        blend =  timepassed / 0.1;
+        if (cl.paused || blend > 1)
+            blend = 0;
+    }
+
+    VectorSubtract (e->origin2, e->origin1, d);
+
+    // Translate.
+    const ScePspFVector3 translation = {
+    e->origin[0] + (blend * d[0]),
+    e->origin[1] + (blend * d[1]),
+    e->origin[2] + (blend * d[2])
+    };
+    sceGumTranslate(&translation);
+/*
+    // Scale.
+    const ScePspFVector3 scale = {
+    e->scale + (blend * d[0]),
+    e->scale + (blend * d[1]),
+    e->scale + (blend * d[2]
+    };
+    sceGumScale(&scale);
+*/
+    // orientation interpolation (Euler angles, yuck!)
+    timepassed = realtime - e->rotate_start_time;
+
+    if (e->rotate_start_time == 0 || timepassed > 1)
+    {
+        e->rotate_start_time = realtime;
+        VectorCopy (e->angles, e->angles1);
+        VectorCopy (e->angles, e->angles2);
+    }
+
+    if (!VectorCompare (e->angles, e->angles2))
+    {
+        e->rotate_start_time = realtime;
+        VectorCopy (e->angles2, e->angles1);
+        VectorCopy (e->angles,  e->angles2);
+        blend = 0;
+    }
+    else
+    {
+        blend = timepassed / 0.1;
+        if (cl.paused || blend > 1)
+            blend = 1;
+    }
+
+    VectorSubtract (e->angles2, e->angles1, d);
+
+    // always interpolate along the shortest path
+    for (i = 0; i < 3; i++)
+    {
+        if (d[i] > 180)
+        {
+            d[i] -= 360;
+        }
+        else if (d[i] < -180)
+        {
+            d[i] += 360;
+        }
+    }
+
+	// Rotate.
+    sceGumRotateZ((e->angles1[YAW] + ( blend * d[YAW])) * (GU_PI / 180.0f));
+	if (shadow == 0)
+	{
+		sceGumRotateY ((-e->angles1[PITCH] + (-blend * d[PITCH])) * (GU_PI / 180.0f));
+		sceGumRotateX ((e->angles1[ROLL] + ( blend * d[ROLL])) * (GU_PI / 180.0f));
+	}
+
 	sceGumUpdateMatrix();
 }
 
@@ -1768,7 +1886,13 @@ void R_SetupGL (void)
 	sceGuScissor(x, glheight - y2 - h, x + w, glheight - y2);
 
     screenaspect = (float)r_refdef.vrect.width/r_refdef.vrect.height;
-	sceGumPerspective(r_refdef.fov_y, screenaspect, 4, 4096);
+	//sceGumPerspective(r_refdef.fov_y, screenaspect, 4, 4096);
+	
+	//johnfitz -- warp view for underwater
+	fovx = screenaspect;
+	fovy = r_refdef.fov_y;
+
+	sceGumPerspective(fovy, fovx, 4, r_maxrange.value);
 
 	if (mirror)
 	{

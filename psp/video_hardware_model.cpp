@@ -706,6 +706,9 @@ static void Mod_ParseWadsFromEntityLump(char *data)
 			return; // error
 
 		Q_strncpyz(value, com_token, sizeof(value));
+		
+		if (!strcmp("MaxRange", key))
+            Cvar_Set("r_maxrange", value);
 
 		if (!strcmp("wad", key))
 		{

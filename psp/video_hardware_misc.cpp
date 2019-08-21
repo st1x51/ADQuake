@@ -228,6 +228,7 @@ void R_Init (void)
     Cvar_RegisterVariable (&r_i_model_transform);
 	Cvar_RegisterVariable (&r_ipolations);
 	Cvar_RegisterVariable (&r_asynch);
+	Cvar_RegisterVariable (&r_showtris);
 	Cvar_RegisterVariable (&gl_keeptjunctions);
 /*
 	Cvar_RegisterVariable (&gl_finish);
@@ -250,6 +251,7 @@ void R_Init (void)
 	Cvar_RegisterVariable (&gl_doubleeyes);
 */
 
+	Cvar_RegisterVariable (&r_maxrange);
 	R_InitParticles ();
 	R_InitParticleTexture ();
 
