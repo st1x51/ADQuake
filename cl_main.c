@@ -502,6 +502,11 @@ void CL_RelinkEntities (void)
 		if (ent->msgtime != cl.mtime[0])
 		{
 			ent->model = NULL;
+			// fenix@io.com: model transform interpolation
+            ent->frame_start_time     = 0;
+            ent->translate_start_time = 0;
+            ent->rotate_start_time    = 0;
+			
 			continue;
 		}
 
@@ -522,6 +527,15 @@ void CL_RelinkEntities (void)
 				if (delta[j] > 100 || delta[j] < -100)
 					f = 1;		// assume a teleportation, not a motion
 			}
+			
+		// fenix@io.com: model transform interpolation
+        // interpolation should be reset in the event of a large delta
+            if (f >= 1)
+            {
+              ent->frame_start_time     = 0;
+              ent->translate_start_time = 0;
+              ent->rotate_start_time    = 0;
+            }
 
 		// interpolate the origin and angles
 			for (j=0 ; j<3 ; j++)
