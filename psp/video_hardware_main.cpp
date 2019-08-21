@@ -25,6 +25,8 @@ extern "C"
 #include "../quakedef.h"
 }
 
+#include "video_hardware_hlmdl.h"
+
 #include <pspgu.h>
 #include <pspgum.h>
 
@@ -883,6 +885,9 @@ void R_DrawEntitiesOnList (void)
 		{
 		case mod_alias:
 			R_DrawAliasModel (currententity);
+			break;
+		case mod_halflife:
+			R_DrawHLModel (currententity);
 			break;
 
 		case mod_brush:

@@ -213,6 +213,7 @@ void R_StoreEfrags (efrag_t **ppefrag)
 		switch (clmodel->type)
 		{
 		case mod_alias:
+		case mod_halflife:
 		case mod_brush:
 		case mod_sprite:
 			pent = pefrag->entity;
