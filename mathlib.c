@@ -27,6 +27,10 @@ void Sys_Error (char *error, ...);
 vec3_t vec3_origin = {0,0,0};
 int nanmask = 255<<23;
 
+int  _mathlib_temp_int1, _mathlib_temp_int2, _mathlib_temp_int3;
+float _mathlib_temp_float1, _mathlib_temp_float2, _mathlib_temp_float3;
+vec3_t _mathlib_temp_vec1, _mathlib_temp_vec2, _mathlib_temp_vec3;
+
 /*-----------------------------------------------------------------*/
 
 /*
@@ -292,6 +296,38 @@ dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
 	return sides;
 }
 
+void vectoangles (vec3_t vec, vec3_t ang)
+{
+	float	forward, yaw, pitch;
+
+	if (!vec[1] && !vec[0])
+	{
+		yaw = 0;
+		pitch = (vec[2] > 0) ? 90 : 270;
+	}
+	else
+	{
+		yaw = vec[0] ? (atan2(vec[1], vec[0]) * 180 / M_PI) : (vec[1] > 0) ? 90 : 270;
+		if (yaw < 0)
+			yaw += 360;
+
+		forward = sqrt (vec[0] * vec[0] + vec[1] * vec[1]);
+		pitch = atan2 (vec[2], forward) * 180 / M_PI;
+		if (pitch < 0)
+			pitch += 360;
+	}
+
+	ang[0] = pitch;
+	ang[1] = yaw;
+	ang[2] = 0;
+}
+
+void VectorTransform (const vec3_t in1, matrix3x4 in2, vec3_t out)
+{
+	out[0] = DotProduct(in1, in2[0]) + in2[0][3];
+	out[1] = DotProduct(in1, in2[1]) +	in2[1][3];
+	out[2] = DotProduct(in1, in2[2]) +	in2[2][3];
+}
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 {
