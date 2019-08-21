@@ -253,6 +253,10 @@ void R_Init (void)
 */
 
 	Cvar_RegisterVariable (&r_maxrange);
+
+	Cvar_RegisterVariable (&r_showbboxes);
+    Cvar_RegisterVariable (&r_showbboxes_full);
+	
 	R_InitParticles ();
 	R_InitParticleTexture ();
 

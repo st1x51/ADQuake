@@ -116,6 +116,8 @@ cvar_t  r_i_model_animation   = {"r_i_model_animation",       "1",qtrue}; // Tog
 cvar_t  r_i_model_transform   = {"r_i_model_transform",       "1",qtrue}; // Toggle smooth model movement
 cvar_t  r_maxrange            = {"r_maxrange",             "4096"}; //render distance
 	
+cvar_t  r_showbboxes          = {"r_showbboxes",              "0"};
+cvar_t  r_showbboxes_full     = {"r_showbboxes_full",         "0",qtrue};
 cvar_t  r_loddist     		  = {"r_loddist",         "256",qtrue};
 /*
 cvar_t	gl_finish = {"gl_finish","0"};
@@ -1971,6 +1973,74 @@ void R_SetupGL (void)
 
 /*
 ================
+R_EmitWireBox -- johnfitz -- draws one axis aligned bounding box
+================
+*/
+void R_EmitWireBox (vec3_t mins, vec3_t maxs, qboolean line_strip)
+{
+	// Allocate the vertices.
+	struct vertex
+	{
+	   float x, y, z;
+	};
+	vertex* const out = static_cast<vertex*>(sceGuGetMemory(sizeof(vertex) * 10));
+	out[0].x = mins[0]; out[0].y = mins[1]; out[0].z = mins[2];
+	out[1].x = mins[0]; out[1].y = mins[1]; out[1].z = maxs[2];
+	out[2].x = maxs[0]; out[2].y = mins[1]; out[2].z = mins[2];
+	out[3].x = maxs[0]; out[3].y = mins[1]; out[3].z = maxs[2];
+	out[4].x = maxs[0]; out[4].y = maxs[1]; out[4].z = mins[2];
+	out[5].x = maxs[0]; out[5].y = maxs[1]; out[5].z = maxs[2];
+	out[6].x = mins[0]; out[6].y = maxs[1]; out[6].z = mins[2];
+	out[7].x = mins[0]; out[7].y = maxs[1]; out[7].z = maxs[2];
+	out[8].x = mins[0]; out[8].y = mins[1]; out[8].z = mins[2];
+	out[9].x = mins[0]; out[9].y = mins[1]; out[9].z = maxs[2];
+	sceGuDrawArray(line_strip ? GU_LINE_STRIP : GU_TRIANGLE_STRIP,GU_VERTEX_32BITF, 10, 0, out);
+}
+
+/*
+================
+R_ShowBoundingBoxes -- johnfitz
+
+draw bounding boxes -- the server-side boxes, not the renderer cullboxes
+================
+*/
+void R_ShowBoundingBoxes (void)
+{
+	extern		edict_t *sv_player;
+	vec3_t		mins,maxs;
+	edict_t		*ed;
+	int			i;
+
+	if (!r_showbboxes.value || cl.maxclients > 1 || !r_drawentities.value || !sv.active)
+		return;
+
+	if(r_showbboxes_full.value)
+	   sceGuDisable (GU_DEPTH_TEST);
+
+	sceGuDisable (GU_TEXTURE_2D);
+	sceGuDisable (GU_CULL_FACE);
+	sceGuColor(GU_COLOR(0,1,0,1));
+	for (i=0, ed = NEXT_EDICT(sv.edicts) ; i < sv.num_edicts ; i++, ed = NEXT_EDICT(ed))
+	{
+		if (ed == sv_player)
+			continue; //don't draw player's own bbox
+
+		R_EmitWireBox (ed->v.absmin, ed->v.absmax, (r_showbboxes.value >= 2) ? qtrue : qfalse);
+	}
+	sceGuColor(GU_COLOR(1,1,1,1));
+	sceGuEnable (GU_TEXTURE_2D);
+	sceGuEnable (GU_CULL_FACE);
+
+	if(r_showbboxes_full.value)
+	   sceGuEnable (GU_DEPTH_TEST);
+	Hud_Changed (); //so we don't get dots collecting on the statusbar
+}
+
+void Fog_EnableGFog (void); 
+void Fog_DisableGFog (void);
+
+/*
+================
 R_RenderScene
 
 r_refdef must be set before the first call
@@ -1997,6 +2067,7 @@ void R_RenderScene (void)
 	R_RenderDlights ();
 
 	R_DrawParticles ();
+	R_ShowBoundingBoxes ();
 
 #ifdef GLTEST
 	Test_Draw ();
