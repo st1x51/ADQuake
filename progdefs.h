@@ -95,6 +95,7 @@ typedef struct
 	string_t classname;
 	string_t model;
 	float	 frame;
+	float	sequence;
 	float	 skin;
 	float	 effects;
 	vec3_t	 mins;

@@ -581,9 +581,9 @@ float r_avertexnormals[NUMVERTEXNORMALS][3] = {
 };
 
 vec3_t	shadevector;
-/*
+
 float	shadelight, ambientlight;
-*/
+
 
 // precalculated dot products for quantized angles
 #define SHADEDOT_QUANT 16
@@ -1846,6 +1846,7 @@ void R_SetupGL (void)
 	float	screenaspect;
 	extern	int glwidth, glheight;
 	int		x, x2, y2, y, w, h;
+	float fovx, fovy; //johnfitz
 
 	//
 	// set up viewpoint
@@ -2033,7 +2034,7 @@ void R_ShowBoundingBoxes (void)
 
 	if(r_showbboxes_full.value)
 	   sceGuEnable (GU_DEPTH_TEST);
-	Hud_Changed (); //so we don't get dots collecting on the statusbar
+	Sbar_Changed (); //so we don't get dots collecting on the statusbar
 }
 
 void Fog_EnableGFog (void); 
