@@ -71,11 +71,170 @@ char *svc_strings[] =
 	"svc_screenfade",       //[float]duration [float]holdtime [short]flags [byte]r [byte]g [byte]b [byte]a
 	"svc_roomtype",         //[short]value
 	"svc_bspdecal",         //[string]name [coords]pos
-	"svc_addangle"
+	"svc_addangle",
+	"svc_showlmp",		// [string] iconlabel [string] lmpfile [byte] x [byte] y
+	"svc_hidelmp",		// [string] iconlabel
+	"svc_showstring",
+	"svc_hidestring"
 };
 
 //=============================================================================
+#define SHOWSTRING_MAXLABELS	256
+typedef struct showstring_s
+{
+	qboolean	isactive;
+	float		x, y;
+	char		labelstring[32];
+	char		stringtoshow[256];
+} showstring_t;
 
+showstring_t	showstring[SHOWSTRING_MAXLABELS];
+void showstring_decodeshow (void)
+{
+	int	i, k;
+	byte	stringlabel[256], stringname[256];
+	float	x, y;
+
+	strcpy (stringlabel, MSG_ReadString());
+	strcpy (stringname, MSG_ReadString());
+	x = MSG_ReadShort ();
+	y = MSG_ReadByte ();
+	k = -1;
+	for (i=0 ; i<SHOWSTRING_MAXLABELS ; i++)
+	{
+		if (showstring[i].isactive)
+		{
+			if (!strcmp(showstring[i].labelstring, stringlabel))
+			{
+				k = i;
+				break;	// drop out to replace it
+			}
+		}
+		else if (k < 0)	// find first empty one to replace
+		{
+			k = i;
+		}
+	}
+
+	if (k < 0)
+		return;	// none found to replace
+	// change existing one
+	showstring[k].isactive = true;
+	strcpy (showstring[k].labelstring, stringlabel);
+	strcpy (showstring[k].stringtoshow, stringname);
+	showstring[k].x = x;
+	showstring[k].y = y;
+}
+void showstring_clear (void)
+{
+	int	i;
+
+	for (i=0 ; i<SHOWSTRING_MAXLABELS ; i++)
+		showstring[i].isactive = false;
+}
+void showstring_drawall (void)
+{
+	int	i;
+
+	for (i=0 ; i<SHOWSTRING_MAXLABELS ; i++)
+		if (showstring[i].isactive)
+			Draw_String_Rus(showstring[i].x, showstring[i].y,showstring[i].stringtoshow);
+}
+void showstring_decodehide (void)
+{
+	int	i;
+	byte	*strlabel;
+
+	strlabel = MSG_ReadString ();
+	for (i=0 ; i<SHOWSTRING_MAXLABELS ; i++)
+	{
+		if (showstring[i].isactive && !strcmp(showstring[i].labelstring, strlabel))
+		{
+			showstring[i].isactive = false;
+			return;
+		}
+	}
+}
+#define SHOWLMP_MAXLABELS	256
+typedef struct showlmp_s
+{
+	qboolean	isactive;
+	float		x, y;
+	char		label[32];
+	char		pic[128];
+} showlmp_t;
+
+showlmp_t	showlmp[SHOWLMP_MAXLABELS];
+
+void SHOWLMP_decodehide (void)
+{
+	int	i;
+	byte	*lmplabel;
+
+	lmplabel = MSG_ReadString ();
+	for (i=0 ; i<SHOWLMP_MAXLABELS ; i++)
+	{
+		if (showlmp[i].isactive && !strcmp(showlmp[i].label, lmplabel))
+		{
+			showlmp[i].isactive = false;
+			return;
+		}
+	}
+}
+
+void SHOWLMP_decodeshow (void)
+{
+	int	i, k;
+	byte	lmplabel[256], picname[256];
+	float	x, y;
+
+	strcpy (lmplabel, MSG_ReadString());
+	strcpy (picname, MSG_ReadString());
+	x = MSG_ReadShort ();
+	y = MSG_ReadByte ();
+	k = -1;
+	for (i=0 ; i<SHOWLMP_MAXLABELS ; i++)
+	{
+		if (showlmp[i].isactive)
+		{
+			if (!strcmp(showlmp[i].label, lmplabel))
+			{
+				k = i;
+				break;	// drop out to replace it
+			}
+		}
+		else if (k < 0)	// find first empty one to replace
+		{
+			k = i;
+		}
+	}
+
+	if (k < 0)
+		return;	// none found to replace
+	// change existing one
+	showlmp[k].isactive = true;
+	strcpy (showlmp[k].label, lmplabel);
+	strcpy (showlmp[k].pic, picname);
+	showlmp[k].x = x;
+	showlmp[k].y = y;
+}
+
+void SHOWLMP_drawall (void)
+{
+	int	i;
+
+	for (i=0 ; i<SHOWLMP_MAXLABELS ; i++)
+		if (showlmp[i].isactive)
+			Draw_TransPic (showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic));
+}
+
+void SHOWLMP_clear (void)
+{
+	int	i;
+
+	for (i=0 ; i<SHOWLMP_MAXLABELS ; i++)
+		showlmp[i].isactive = false;
+}
 /*
 ==============
 CL_ParseScreenShake
@@ -602,6 +761,10 @@ if (bits&(1<<i))
 	else
 		ent->rendercolor[2] = ent->baseline.rendercolor[2];
 //New vars
+	if (bits & U_SEQUENCE) // 0
+		ent->sequence = MSG_ReadByte ();
+	else
+		ent->sequence = ent->baseline.sequence;
 
 // shift the known values for interpolation
 	VectorCopy (ent->msg_origins[0], ent->msg_origins[1]);
@@ -660,6 +823,7 @@ void CL_ParseBaseline (entity_t *ent)
 	ent->baseline.frame = MSG_ReadByte ();
 	ent->baseline.colormap = MSG_ReadByte();
 	ent->baseline.skin = MSG_ReadByte();
+	ent->baseline.sequence = MSG_ReadByte();
 
 //New vars
 	ent->baseline.renderamt = MSG_ReadByte();
@@ -751,7 +915,17 @@ void CL_ParseClientdata (int bits)
 		cl.stats[STAT_WEAPON] = i;
 		Sbar_Changed ();
 	}
+	if (bits & SU_SEQUENCE)
+		i = MSG_ReadByte ();
+	else
+		i = 0;
 	
+	if (cl.stats[STAT_SEQUENCE] != i)
+	{
+		cl.stats[STAT_SEQUENCE] = i;
+		Sbar_Changed ();
+	}
+
 	i = MSG_ReadShort ();
 	if (cl.stats[STAT_HEALTH] != i)
 	{
@@ -857,6 +1031,7 @@ void CL_ParseStatic (void)
 	ent->frame = ent->baseline.frame;
 	ent->colormap = vid.colormap;
 	ent->skinnum = ent->baseline.skin;
+	ent->sequence = ent->baseline.sequence; // 0
 	ent->effects = ent->baseline.effects;
 //New vars
 	ent->renderamt = ent->baseline.renderamt;
@@ -1162,6 +1337,19 @@ void CL_ParseServerMessage (void)
 		case svc_sellscreen:
 			Cmd_ExecuteString ("help", src_command);
 			break;
+		case svc_hidelmp:
+			SHOWLMP_decodehide ();
+			break;
+
+		case svc_showlmp:
+			SHOWLMP_decodeshow ();
+			break;	
+		case svc_showstring:
+			showstring_decodeshow ();
+			break;	
+		case svc_hidestring:
+			showstring_decodehide ();
+			break;		
 		}
 	}
 }
