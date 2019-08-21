@@ -116,6 +116,7 @@ cvar_t  r_i_model_animation   = {"r_i_model_animation",       "1",qtrue}; // Tog
 cvar_t  r_i_model_transform   = {"r_i_model_transform",       "1",qtrue}; // Toggle smooth model movement
 cvar_t  r_maxrange            = {"r_maxrange",             "4096"}; //render distance
 	
+cvar_t  r_loddist     		  = {"r_loddist",         "256",qtrue};
 /*
 cvar_t	gl_finish = {"gl_finish","0"};
 cvar_t	gl_clear = {"gl_clear","0"};

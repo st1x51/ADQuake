@@ -196,6 +196,7 @@ extern  cvar_t  r_i_model_transform;
 extern  cvar_t  r_ipolations;
 extern  cvar_t  r_asynch;
 extern  cvar_t  r_showtris;
+extern  cvar_t  r_loddist;
 extern  cvar_t  r_showtris;
 extern  cvar_t  r_showtris_full;
 extern	cvar_t  r_maxrange;
