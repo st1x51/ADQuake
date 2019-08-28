@@ -519,7 +519,7 @@ void Lighting (float *lv, int bone, int flags, vec3_t normal)
 
 	if (flags & STUDIO_NF_FLATSHADE)
 	{
-		illum += shadelight * 0,8;
+		illum += shadelight * 0.8;
 	}
 	else
 	{
@@ -670,7 +670,6 @@ void R_DrawHLModel(entity_t	*curent)
 
 	if (sequence->motiontype)
 		model.frame = sequence->numframes-1;
-	sceGuDisable(GU_FOG);
     sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
     sceGuShadeModel(GU_SMOOTH);
 	
@@ -800,7 +799,6 @@ void R_DrawHLModel(entity_t	*curent)
     sceGumPopMatrix();
     sceGumUpdateMatrix();
     sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
-	sceGuEnable(GU_FOG);
 }
 
 /*
