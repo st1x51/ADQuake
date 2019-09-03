@@ -38,6 +38,7 @@ COMMON_OBJS = \
     $(OBJ_DIR)/psp/cd.o \
     $(OBJ_DIR)/psp/mp3.o \
 	$(OBJ_DIR)/psp/battery.o \
+	$(OBJ_DIR)/psp/KernelHooks/ctrl/cwbhook_extender.o \
 	$(OBJ_DIR)/psp/input.o \
 	$(OBJ_DIR)/psp/main.o \
 	$(OBJ_DIR)/psp/math.o \

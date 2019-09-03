@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern "C"
 {
+#include "KernelHooks/ctrl/cwbhook.h"
 #include "../quakedef.h"
 }
 
@@ -104,7 +105,6 @@ void IN_Init (void)
 
 	// Build the button to Quake key maps.
 	// Common keys:
-	buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_SELECT)]	= '~';
 	buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_START)]	= K_ESCAPE;
 	buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_UP)]		= K_UPARROW;
 	buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_RIGHT)]	= K_RIGHTARROW;
@@ -121,7 +121,15 @@ void IN_Init (void)
 	buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_CIRCLE)]		= K_JOY2;	
 	buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_CROSS)]		= K_JOY3;
 	buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_SQUARE)]		= K_JOY4;
-
+	buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_SELECT)]		= K_JOY5;
+    if(ctrl_kernel)
+    {
+       buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_NOTE)]	    = K_AUX3;
+       buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_HOME)]	    = K_AUX4;
+	   buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_VOLUP)]	= K_AUX11;
+       buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_VOLDOWN)]	= K_AUX12;
+       buttonToGameKeyMap[buttonMaskToShift(PSP_CTRL_SCREEN)]	= K_AUX13;
+    }
 	// Console keys:
 	buttonToConsoleKeyMap[buttonMaskToShift(PSP_CTRL_LTRIGGER)]	= K_PGUP;
 	buttonToConsoleKeyMap[buttonMaskToShift(PSP_CTRL_RTRIGGER)]	= K_PGDN;
@@ -232,7 +240,10 @@ void IN_Commands (void)
 
 	// Read the pad state.
 	SceCtrlData pad;
-	sceCtrlPeekBufferPositive(&pad, 1);
+    if(ctrl_kernel)
+       cwbCtrlPeekBufferPositive(&pad, 1);
+    else
+		sceCtrlPeekBufferPositive(&pad, 1);
 
 	// Find out which buttons have changed.
 	SceCtrlData deltaPad;
