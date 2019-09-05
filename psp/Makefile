@@ -115,7 +115,7 @@ VIDEO_FLAGS = -DPSP_HARDWARE_VIDEO
 OBJS	= $(VIDEO_OBJS) $(COMMON_OBJS) $(GPROF_OBJS)
 
 # Compiler flags.
-CFLAGS	= -ffast-math -O3 -G0 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DFPS_20 -DPSP $(VIDEO_FLAGS) -g
+CFLAGS	= -ffast-math -O3 -G0 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g
 
 # Libs.
 IMG_LIBS    = -ljpeg -lpng -lz
