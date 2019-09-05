@@ -24,6 +24,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "../modelgen.h"
 #include "../spritegn.h"
+#ifdef PSP_VFPU
+#include <pspmath.h>
+#endif
 /*
 #include "mstudio.h"
 */
@@ -345,7 +348,7 @@ typedef struct {
 	maliasframedesc_t	frames[1];	// variable sized
 } aliashdr_t;
 
-#define	MAXALIASVERTS	1024
+#define	MAXALIASVERTS	5120
 #define	MAXALIASFRAMES	256
 #define	MAXALIASTRIS	2048
 extern	aliashdr_t	*pheader;

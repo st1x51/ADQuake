@@ -31,6 +31,9 @@ extern"C"
 #include <pspgu.h>
 #include <pspgum.h>
 #include <list>
+#ifdef PSP_VFPU
+#include <pspmath.h>
+#endif
 using namespace std;
 extern list<int> mapTextureNameList;
 
@@ -70,12 +73,21 @@ void QuaternionGLAngle(const vec3_t angles, vec4_t quaternion)
     float	yaw = angles[2] * 0.5;
     float	pitch = angles[1] * 0.5;
     float	roll = angles[0] * 0.5;
+	#ifdef PSP_VFPU
+	float	siny = vfpu_sinf(yaw);
+    float	cosy = vfpu_cosf(yaw);
+    float	sinp = vfpu_sinf(pitch);
+    float	cosp = vfpu_cosf(pitch);
+    float	sinr = vfpu_sinf(roll);
+    float	cosr = vfpu_cosf(roll);
+	#else
     float	siny = sin(yaw);
     float	cosy = cos(yaw);
     float	sinp = sin(pitch);
     float	cosp = cos(pitch);
     float	sinr = sin(roll);
     float	cosr = cos(roll);
+	#endif
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     quaternion[0] = sinr * cosp * cosy - cosr * sinp * siny;
@@ -705,8 +717,13 @@ void R_DrawHLModel(entity_t	*curent)
 
     float an;
 	an = curent->angles[1]/180*M_PI;
+	#ifdef PSP_VFPU
+	shadevector[0] = vfpu_cosf(-an);
+	shadevector[1] = vfpu_sinf(-an);
+	#else
 	shadevector[0] = cosf(-an);
 	shadevector[1] = sinf(-an);
+	#endif
 	shadevector[2] = 1;
 	VectorNormalize (shadevector);
 
@@ -720,7 +737,11 @@ void R_DrawHLModel(entity_t	*curent)
 	int lodDist_x = (curent->origin[0] - player->origin[0]); //дистанция между игроком и моделью?
 	int lodDist_y = (curent->origin[1] - player->origin[1]); //дистанция между игроком и моделью?
 	origin =lodDist_x * lodDist_x + lodDist_y * lodDist_y;
+	#ifdef PSP_VFPU
+	int lodDist = vfpu_sqrtf(origin);
+	#else
 	int lodDist = sqrtf(origin);
+	#endif
 	int numLods;
 	//lod
     HL_SetupBones(&model);	/* Setup the bones */

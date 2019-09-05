@@ -20,7 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // view.c -- player eye positioning
 
 #include "quakedef.h"
-
+#ifdef PSP_VFPU
+#include <pspmath.h>
+#endif
 /*
 
 The view is allowed to move slightly from it's true position for bobbing,
@@ -192,7 +194,11 @@ void V_DriftPitch (void)
 // don't count small mouse motion
 	if (cl.nodrift)
 	{
+		#ifdef PSP_VFPU
+		if ( vfpu_fabsf(cl.cmd.forwardmove) < cl_forwardspeed.value)
+		#else
 		if ( fabsf(cl.cmd.forwardmove) < cl_forwardspeed.value)
+		#endif
 			cl.driftmove = 0;
 		else
 			cl.driftmove += host_frametime;
@@ -1070,6 +1076,7 @@ void V_CalcRefdef (void)
 	view->model = cl.model_precache[cl.stats[STAT_WEAPON]];
 	view->frame = cl.stats[STAT_WEAPONFRAME];
 	view->colormap = vid.colormap;
+	view->sequence = cl.stats[STAT_SEQUENCE];
 
 // set up the refresh position
 	VectorAdd (r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);

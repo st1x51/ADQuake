@@ -119,7 +119,7 @@ CFLAGS	= -ffast-math -O3 -G0 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DFPS_
 
 # Libs.
 IMG_LIBS    = -ljpeg -lpng -lz
-GU_LIBS	    = -lpspvram -lpspgum_vfpu -lpspvfpu -lpspgu
+GU_LIBS	    = -lpspvram -lpspgum_vfpu -lpspvfpu -lpspgu -lpspmath
 AUDIO_LIBS	= -lpspaudiolib -lpspaudio -lpspmp3
 MISC_LIBS	= -lpsprtc -lpsppower
 STD_LIBS	= -lstdc++ -lm -lc

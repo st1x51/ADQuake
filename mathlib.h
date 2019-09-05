@@ -18,7 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // mathlib.h
-
+#ifdef PSP_VFPU
+#include <pspmath.h>
+#endif
 typedef float vec_t;
 typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
@@ -61,7 +63,11 @@ extern	int nanmask;
 #define VectorSet(v, x, y, z) ((v)[0]=(x),(v)[1]=(y),(v)[2]=(z))
 #define Vector2Set(v, x, y) ((v)[0]=(x),(v)[1]=(y))
 #define Vector4Set(v, a, b, c, d) ((v)[0]=(a),(v)[1]=(b),(v)[2]=(c),(v)[3] = (d))
+#ifdef PSP_VFPU
+#define VectorLength(a) ( vfpu_sqrtf( DotProduct( a, a )))
+#else
 #define VectorLength(a) ( sqrt( DotProduct( a, a )))
+#endif
 #define VecLength2(a) (DotProduct( a, a ))
 #define VectorNormalizeFast( v ){float	ilength = (float)rsqrt(DotProduct(v,v));v[0] *= ilength;v[1] *= ilength;v[2] *= ilength; }
 
