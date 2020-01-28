@@ -916,16 +916,10 @@ void CL_ParseClientdata (int bits)
 		Sbar_Changed ();
 	}
 	if (bits & SU_SEQUENCE)
-		i = MSG_ReadByte ();
+		cl.stats[STAT_SEQUENCE] = MSG_ReadByte ();
 	else
-		i = 0;
+		cl.stats[STAT_SEQUENCE] = 0;
 	
-	if (cl.stats[STAT_SEQUENCE] != i)
-	{
-		cl.stats[STAT_SEQUENCE] = i;
-		Sbar_Changed ();
-	}
-
 	i = MSG_ReadShort ();
 	if (cl.stats[STAT_HEALTH] != i)
 	{

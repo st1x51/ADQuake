@@ -392,64 +392,27 @@ void HL_CalcBoneAdj(hlmodel_t *model)
         /*~~~~~~~~~~~~~~~~~~~~~*/
         int j = control[i].index;
         /*~~~~~~~~~~~~~~~~~~~~~*/
-/*
+
         if(control[i].type & 0x8000)
         {
             value = model->controller[j] + control[i].start;
         }
         else
         {
-            value = model->controller[j];
+            value = (model->controller[j]+1)*0.5;	//shifted to give a valid range between -1 and 1, with 0 being mid-range.
             if(value < 0)
                 value = 0;
             else if(value > 1.0)
                 value = 1.0;
             value = (1.0 - value) * control[i].start + value * control[i].end;
         }
-*/
 
-		if (j <= 3)
-		{
-			// check for 360% wrapping
-			if (control[i].type & STUDIO_RLOOP)
-			{
-				value = model->controller[j] * (360.0/256.0) + control[i].start;
-			}
-			else
-			{
-				value = model->controller[j] / 255.0;
-				if (value < 0)
-				 value = 0;
-				if (value > 1.0)
-				 value = 1.0;
-				value = (1.0 - value) * control[i].start + value * control[i].end;
-			}
-			// Con_DPrintf( "%d %d %f : %f\n", m_controller[i], m_prevcontroller[i], value, dadt );
-		}
-		else
-		{
-			value = /*model->mouth*/1 / 64.0;
-			if (value > 1.0)
-			 value = 1.0;
-			value = (1.0 - value) * control[i].start + value * control[i].end;
-			// Con_DPrintf("%d %f\n", mouthopen, value );
-		}
-
-	    /* Rotational controllers need their values converted */
-		switch(control[i].type & STUDIO_TYPES)
-		{
-		case STUDIO_XR:
-		case STUDIO_YR:
-		case STUDIO_ZR:
-			model->adjust[i] = value * (M_PI / 180.0);
-			break;
-		case STUDIO_X:
-		case STUDIO_Y:
-		case STUDIO_Z:
-			model->adjust[i] = value;
-			break;
-		}
-	}
+        /* Rotational controllers need their values converted */
+        if(control[i].type >= 0x0008 && control[i].type <= 0x0020)
+            model->adjust[i] = M_PI * value / 180;
+        else
+            model->adjust[i] = value;
+    }
 }
 
 /*
@@ -558,7 +521,7 @@ void Lighting (float *lv, int bone, int flags, vec3_t normal)
 
 	if (illum > 255)
 		illum = 255;
-	*lv = 3 * illum / 255.0;	// Light from 0 to 1.0 // умножил на 3, а то модели были тёмные
+	*lv = illum / 255.0;	// Light from 0 to 1.0
 }
 
 void VectorIRotate (const vec3_t in1, const float in2[3][4], vec3_t out)
@@ -571,8 +534,8 @@ void VectorIRotate (const vec3_t in1, const float in2[3][4], vec3_t out)
 void SetupLighting ( hlmodel_t *model )
 {
 	int i;
-	ambientlight = 128;
-	shadelight = 33;
+	ambientlight = 190;
+	shadelight = 12;
 
 	g_lightvec[0] = shadevector[0];
 	g_lightvec[1] = shadevector[1];
@@ -671,8 +634,8 @@ void R_DrawHLModel(entity_t	*curent)
 		model.frametime -= (int)model.frametime;
 	}
 */
-	//if (!sequence->numframes)
-	//	return;
+	if (!sequence->numframes)
+		return;
 
 /*
 	if(model.frame >= sequence->numframes)
@@ -680,8 +643,9 @@ void R_DrawHLModel(entity_t	*curent)
 */
 		model.frame = curent->frame; // dr_mabuse1981: This makes your Halflife model frame based (only for sequence 0 atm but better than the old shit.)
 
-	if (sequence->motiontype)
-		model.frame = sequence->numframes-1;
+	//if (sequence->motiontype)
+	//	model.frame = sequence->numframes-1;
+
     sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
     sceGuShadeModel(GU_SMOOTH);
 	
