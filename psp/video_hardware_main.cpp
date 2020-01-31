@@ -1902,11 +1902,13 @@ void R_SetupGL (void)
 	{
 		if (mirror_plane->normal[2])
 		{
-			/*glScalef (1, -1, 1);*/
+			const ScePspFVector3 scaling = {1, -1, 1};
+	        sceGumScale(&scaling);
 		}
 		else
 		{
-			/*glScalef (-1, 1, 1);*/
+			const ScePspFVector3 scaling = {-1, 1, 1};
+	        sceGumScale(&scaling);
 		}
 		/*glCullFace(GL_BACK);*/
 	}
@@ -2156,29 +2158,43 @@ void R_Mirror (void)
 	glDepthFunc (GL_LEQUAL);
 */
 	// blend on top
-/*	glEnable (GL_BLEND);
-	glMatrixMode(GL_PROJECTION);*/
+	sceGuEnable (GU_BLEND);
+	sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
+    sceGumMatrixMode(GU_PROJECTION);
+	sceGumLoadIdentity();
+	
 	if (mirror_plane->normal[2])
 	{
-		/*glScalef (1,-1,1);*/
-	}
+	    const ScePspFVector3 scaling = {1, -1, 1};
+		sceGumScale(&scaling);
+  	}
 	else
 	{
-		/*glScalef (-1,1,1);*/
+		const ScePspFVector3 scaling = {-1, 1, 1};
+		sceGumScale(&scaling);
 	}
-	/*glCullFace(GL_FRONT);
-	glMatrixMode(GL_MODELVIEW);
+	sceGuEnable (GU_CULL_FACE);
+    sceGuFrontFace(GU_CW);
+	
+    sceGumMatrixMode(GU_VIEW);
+	sceGumLoadIdentity();
 
-	glLoadMatrixf (r_base_world_matrix);
+	sceGumMatrixMode(GU_MODEL);
 
-	glColor4f (1,1,1,r_mirroralpha.value);
-	*/
+	sceGumStoreMatrix(&r_base_world_matrix);
+	sceGumUpdateMatrix();
+
+	sceGuColor(GU_COLOR(1,1,1,r_mirroralpha.value));
+
 	s = cl.worldmodel->textures[mirrortexturenum]->texturechain;
 	for ( ; s ; s=s->texturechain)
 		R_RenderBrushPoly (s);
 	cl.worldmodel->textures[mirrortexturenum]->texturechain = NULL;
-	/*glDisable (GL_BLEND);
-	glColor4f (1,1,1,1);*/
+	
+	sceGuDisable (GU_BLEND);
+	sceGuDisable (GU_CULL_FACE);
+	sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+	sceGuColor (0xffffffff);
 }
 
 /*
