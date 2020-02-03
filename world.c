@@ -149,7 +149,7 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset,
 			Sys_Error ("MOVETYPE_PUSH with a non bsp model");
 
 		VectorSubtract (maxs, mins, size);
-
+#ifdef ADQ_CUSTOM
 		if (move_ent->v.hull)  // Entity is specifying which hull to use
 		{
 			index = move_ent->v.hull-1;
@@ -162,6 +162,7 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset,
 		}
 		else
 		{
+#endif
 			if (model->bspversion == HL_BSPVERSION)
 			{
 				if (size[0] < 3)
@@ -191,7 +192,9 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset,
 				else
 					hull = &model->hulls[2];
 			}
+#ifdef ADQ_CUSTOM
          }
+#endif
 // calculate an offset value to center the origin
 		VectorSubtract (hull->clip_mins, mins, offset);
 		VectorAdd (offset, ent->v.origin, offset);

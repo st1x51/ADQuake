@@ -133,12 +133,14 @@ void ED_Free (edict_t *ed)
 	ed->v.colormap = 0;
 	ed->v.skin = 0;
 	ed->v.frame = 0;
+#ifdef ADQ_CUSTOM
 	ed->v.sequence = 0; // 0
 //New vars
 	ed->v.renderamt = 0;
 	ed->v.rendermode = 0;
 	VectorCopy (vec3_origin, ed->v.rendercolor);
 //New vars
+#endif
 	VectorCopy (vec3_origin, ed->v.origin);
 	VectorCopy (vec3_origin, ed->v.angles);
 	ed->v.nextthink = -1;

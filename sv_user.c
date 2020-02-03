@@ -66,10 +66,10 @@ void SV_SetIdealPitch (void)
 	angleval = sv_player->v.angles[YAW] * M_PI*2 / 360;
 	sinval = sinf(angleval);
 	cosval = cosf(angleval);
-
+#ifdef ADQ_CUSTOM
 	save_hull = sv_player->v.hull;
 	sv_player->v.hull = 0;
-
+#endif
 	for (i=0 ; i<MAX_FORWARD ; i++)
 	{
 		top[0] = sv_player->v.origin[0] + cosval*(i+3)*12;
@@ -81,17 +81,20 @@ void SV_SetIdealPitch (void)
 		bottom[2] = top[2] - 160;
 		
 		tr = SV_Move (top, vec3_origin, vec3_origin, bottom, 1, sv_player);
+
 		if ((tr.allsolid) || // looking at a wall, leave ideal the way is was
 			(tr.fraction == 1))// near a dropoff
 		{
+#ifdef ADQ_CUSTOM
 			sv_player->v.hull = save_hull;
+#endif
 			return;
 		}
 		z[i] = top[2] + tr.fraction*(bottom[2]-top[2]);
 	}
-
+#ifdef ADQ_CUSTOM
 	sv_player->v.hull = save_hull;	//restore
-
+#endif
 	dir = 0;
 	steps = 0;
 	for (j=1 ; j<i ; j++)
@@ -145,12 +148,14 @@ void SV_UserFriction (void)
 	start[1] = stop[1] = origin[1] + vel[1]/speed*16;
 	start[2] = origin[2] + sv_player->v.mins[2];
 	stop[2] = start[2] - 34;
-
+#ifdef ADQ_CUSTOM
 	save_hull = sv_player->v.hull;
 	sv_player->v.hull = 0;
+#endif
 	trace = SV_Move (start, vec3_origin, vec3_origin, stop, true, sv_player);
+#ifdef ADQ_CUSTOM
 	sv_player->v.hull = save_hull;
-
+#endif
 	if (trace.fraction == 1.0)
 		friction = sv_friction.value*sv_edgefriction.value;
 	else
@@ -474,8 +479,9 @@ void SV_ReadClientMove (usercmd_t *move)
 	host_client->edict->v.button0 = bits & 1; // fire
 	host_client->edict->v.button1 = bits & 2; // use
 	host_client->edict->v.button2 = bits & 4; // jump  //(bits & 2)>>1;
+#ifdef ADQ_CUSTOM
 	host_client->edict->v.button3 = bits & 8; // crouch
-	
+#endif
 /*
 	if (bits & 4) // crouched?
 		host_client->edict->v.button3 = ((int)host_client->edict->v.button3) | FL2_CROUCHED;

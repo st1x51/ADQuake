@@ -501,6 +501,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		
 		if (ent->baseline.effects != ent->v.effects)
 			bits |= U_EFFECTS;
+#ifdef ADQ_CUSTOM
 //New vars
 		if (ent->baseline.renderamt != ent->v.renderamt)
 			bits |= U_RENDERAMT;
@@ -520,6 +521,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 //New vars
 		if (ent->baseline.sequence != ent->v.sequence)
 			bits |= U_SEQUENCE;
+#endif
 		
 		if (ent->baseline.modelindex != ent->v.modelindex)
 			bits |= U_MODEL;
@@ -558,6 +560,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 			MSG_WriteByte (msg, ent->v.skin);
 		if (bits & U_EFFECTS)
 			MSG_WriteByte (msg, ent->v.effects);
+#ifdef ADQ_CUSTOM
 //New vars
 		if (bits & U_RENDERAMT)
 			MSG_WriteByte (msg, ent->v.renderamt);
@@ -572,6 +575,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 //New vars
 		if (bits & U_SEQUENCE)
 			MSG_WriteByte (msg, ent->v.sequence);
+#endif
 		if (bits & U_ORIGIN1)
 			MSG_WriteCoord (msg, ent->v.origin[0]);		
 		if (bits & U_ANGLE1)
@@ -708,10 +712,10 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 
 //	if (ent->v.weapon)
 		bits |= SU_WEAPON;
-	
+#ifdef ADQ_CUSTOM
 	if (ent->v.wepsequence)
 		bits |= SU_SEQUENCE;
-
+#endif
 // send the data
 
 	MSG_WriteByte (msg, svc_clientdata);
@@ -740,9 +744,10 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		MSG_WriteByte (msg, ent->v.armorvalue);
 	if (bits & SU_WEAPON)
 		MSG_WriteByte (msg, SV_ModelIndex(pr_strings+ent->v.weaponmodel));
+#ifdef ADQ_CUSTOM
 	if (bits & SU_SEQUENCE)
 		MSG_WriteByte (msg, ent->v.wepsequence);
-	
+#endif
 	MSG_WriteShort (msg, ent->v.health);
 	MSG_WriteByte (msg, ent->v.currentammo);
 	MSG_WriteByte (msg, ent->v.ammo_shells);
@@ -999,12 +1004,14 @@ void SV_CreateBaseline (void)
 		VectorCopy (svent->v.angles, svent->baseline.angles);
 		svent->baseline.frame = svent->v.frame;
 		svent->baseline.skin = svent->v.skin;
+#ifdef ADQ_CUSTOM
 		svent->baseline.sequence = svent->v.sequence;
 //New vars
 		svent->baseline.renderamt = svent->v.renderamt;
 		svent->baseline.rendermode = svent->v.rendermode;
 		VectorCopy (svent->v.rendercolor, svent->baseline.rendercolor);
 //New vars
+#endif
 		if (entnum > 0 && entnum <= svs.maxclients)
 		{
 			svent->baseline.colormap = entnum;
@@ -1027,16 +1034,20 @@ void SV_CreateBaseline (void)
 		MSG_WriteByte (&sv.signon, svent->baseline.frame);
 		MSG_WriteByte (&sv.signon, svent->baseline.colormap);
 		MSG_WriteByte (&sv.signon, svent->baseline.skin);
+#ifdef ADQ_CUSTOM
 		MSG_WriteByte (&sv.signon, svent->baseline.sequence);
 //New vars
        MSG_WriteByte (&sv.signon, svent->baseline.renderamt);
        MSG_WriteByte (&sv.signon, svent->baseline.rendermode);
 //New vars
+#endif
 		for (i=0 ; i<3 ; i++)
 		{
+#ifdef ADQ_CUSTOM
 //New vars
            MSG_WriteCoord(&sv.signon, svent->baseline.rendercolor[i]);
 //New vars
+#endif
 			MSG_WriteCoord(&sv.signon, svent->baseline.origin[i]);
 			MSG_WriteAngle(&sv.signon, svent->baseline.angles[i]);
 		}

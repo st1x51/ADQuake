@@ -765,12 +765,14 @@ void PF_traceline (void)
 	v2 = G_VECTOR(OFS_PARM1);
 	nomonsters = G_FLOAT(OFS_PARM2);
 	ent = G_EDICT(OFS_PARM3);
-
+#ifdef ADQ_CUSTOM
 	save_hull = ent->v.hull;
 	ent->v.hull = 0;
+#endif
 	trace = SV_Move (v1, vec3_origin, vec3_origin, v2, nomonsters, ent);
+#ifdef ADQ_CUSTOM
 	ent->v.hull = save_hull;
-
+#endif
 	pr_global_struct->trace_allsolid = trace.allsolid;
 	pr_global_struct->trace_startsolid = trace.startsolid;
 	pr_global_struct->trace_fraction = trace.fraction;
@@ -840,12 +842,14 @@ void PF_tracearea (void)
 	maxs = G_VECTOR(OFS_PARM3);
 	nomonsters = G_FLOAT(OFS_PARM4);
 	ent = G_EDICT(OFS_PARM5);
-
+#ifdef ADQ_CUSTOM
 	save_hull = ent->v.hull;
 	ent->v.hull = 0;
+#endif
 	trace = SV_Move (v1, mins, maxs, v2, nomonsters, ent);
+#ifdef ADQ_CUSTOM
 	ent->v.hull = save_hull;
-
+#endif
 	pr_global_struct->trace_allsolid = trace.allsolid;
 	pr_global_struct->trace_startsolid = trace.startsolid;
 	pr_global_struct->trace_fraction = trace.fraction;
@@ -1871,16 +1875,20 @@ void PF_makestatic (void)
 	MSG_WriteByte (&sv.signon, ent->v.frame);
 	MSG_WriteByte (&sv.signon, ent->v.colormap);
 	MSG_WriteByte (&sv.signon, ent->v.skin);
+#ifdef ADQ_CUSTOM
 	MSG_WriteByte (&sv.signon, ent->v.sequence);
 //New vars
 	MSG_WriteByte (&sv.signon, ent->v.renderamt);
 	MSG_WriteByte (&sv.signon, ent->v.rendermode);
 //New vars
+#endif
 	for (i=0 ; i<3 ; i++)
 	{
+#ifdef ADQ_CUSTOM
 //New vars
         MSG_WriteCoord(&sv.signon, ent->v.rendercolor[i]);
 //New vars
+#endif
 		MSG_WriteCoord(&sv.signon, ent->v.origin[i]);
 		MSG_WriteAngle(&sv.signon, ent->v.angles[i]);
 	}

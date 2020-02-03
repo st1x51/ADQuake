@@ -734,7 +734,7 @@ if (bits&(1<<i))
 		ent->effects = MSG_ReadByte();
 	else
 		ent->effects = ent->baseline.effects;
-
+#ifdef ADQ_CUSTOM
 //New vars
 	if (bits & U_RENDERAMT)
 		ent->renderamt = MSG_ReadByte();
@@ -765,7 +765,7 @@ if (bits&(1<<i))
 		ent->sequence = MSG_ReadByte ();
 	else
 		ent->sequence = ent->baseline.sequence;
-
+#endif
 // shift the known values for interpolation
 	VectorCopy (ent->msg_origins[0], ent->msg_origins[1]);
 	VectorCopy (ent->msg_angles[0], ent->msg_angles[1]);
@@ -823,19 +823,21 @@ void CL_ParseBaseline (entity_t *ent)
 	ent->baseline.frame = MSG_ReadByte ();
 	ent->baseline.colormap = MSG_ReadByte();
 	ent->baseline.skin = MSG_ReadByte();
+#ifdef ADQ_CUSTOM
 	ent->baseline.sequence = MSG_ReadByte();
 
 //New vars
 	ent->baseline.renderamt = MSG_ReadByte();
 	ent->baseline.rendermode = MSG_ReadByte();
 //New vars
-
+#endif
 	for (i=0 ; i<3 ; i++)
 	{
-
+#ifdef ADQ_CUSTOM
 //New vars
         ent->baseline.rendercolor[i] = MSG_ReadCoord ();
 //New vars
+#endif
 		ent->baseline.origin[i]      = MSG_ReadCoord ();
 		ent->baseline.angles[i]      = MSG_ReadAngle ();
 	}
@@ -915,11 +917,12 @@ void CL_ParseClientdata (int bits)
 		cl.stats[STAT_WEAPON] = i;
 		Sbar_Changed ();
 	}
+#ifdef ADQ_CUSTOM
 	if (bits & SU_SEQUENCE)
 		cl.stats[STAT_SEQUENCE] = MSG_ReadByte ();
 	else
 		cl.stats[STAT_SEQUENCE] = 0;
-	
+#endif
 	i = MSG_ReadShort ();
 	if (cl.stats[STAT_HEALTH] != i)
 	{
@@ -1025,13 +1028,17 @@ void CL_ParseStatic (void)
 	ent->frame = ent->baseline.frame;
 	ent->colormap = vid.colormap;
 	ent->skinnum = ent->baseline.skin;
+#ifdef ADQ_CUSTOM
 	ent->sequence = ent->baseline.sequence; // 0
+#endif
 	ent->effects = ent->baseline.effects;
+#ifdef ADQ_CUSTOM
 //New vars
 	ent->renderamt = ent->baseline.renderamt;
 	ent->rendermode = ent->baseline.rendermode;
     VectorCopy (ent->baseline.rendercolor, ent->rendercolor);
 //New vars
+#endif
 	VectorCopy (ent->baseline.origin, ent->origin);
 	VectorCopy (ent->baseline.angles, ent->angles);	
 	R_AddEfrags (ent);
