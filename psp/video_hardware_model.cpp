@@ -1840,6 +1840,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	if (pheader->numtris <= 0)
 		Sys_Error ("model %s has no triangles", mod->name);
 
+	if (pheader->numtris > MAXALIASTRIS)
+		Sys_Error ("model %s has too many triangles (%d, max = %d)", mod->name, pheader->numtris, MAXALIASTRIS);
+
 	pheader->numframes = LittleLong (pinmodel->numframes);
 	numframes = pheader->numframes;
 	if (numframes < 1)
