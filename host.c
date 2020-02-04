@@ -80,7 +80,7 @@ cvar_t	coop = {"coop","0"};			// 0 or 1
 cvar_t	pausable = {"pausable","1"};
 
 cvar_t	temp1 = {"temp1","0"};
-
+cvar_t	host_timescale = {"host_timescale", "0"}; //johnfitz
 qboolean bmg_type_changed = false;
 
 
@@ -232,6 +232,7 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&pausable);
 
 	Cvar_RegisterVariable (&temp1);
+	Cvar_RegisterVariable (&host_timescale);
 
 	Host_FindMaxClients ();
 	
@@ -511,15 +512,14 @@ qboolean Host_FilterTime (float time)
 	host_frametime = realtime - oldrealtime;
 	oldrealtime = realtime;
 
-	if (host_framerate.value > 0)
+	//johnfitz -- host_timescale is more intuitive than host_framerate
+	if (host_timescale.value > 0)
+		host_frametime *= host_timescale.value;
+	//johnfitz
+	else if (host_framerate.value > 0)
 		host_frametime = host_framerate.value;
-	else
-	{	// don't allow really long or short frames
-		if (host_frametime > 0.1)
-			host_frametime = 0.1;
-		if (host_frametime < 0.001)
-			host_frametime = 0.001;
-	}
+	else // don't allow really long or short frames
+		host_frametime = CLAMP (0.001, host_frametime, 0.1); //johnfitz -- use CLAMP
 
 	return true;
 }
