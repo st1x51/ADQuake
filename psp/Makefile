@@ -5,7 +5,7 @@ PSP_EBOOT_TITLE = Quake
 #PSP_EBOOT_ICON = icon.png
 #PSP_EBOOT_PIC1 = pic.png
 PSP_LARGE_MEMORY = 1
-
+PSP_FW_VERSION = 660
 ifeq ($(USE_GPROF),1)
 GPROF_LIBS      = -lpspprof
 GPROF_FLAGS		= -pg -DPROFILE
@@ -92,10 +92,8 @@ VIDEO_FLAGS = -DPSP_HARDWARE_VIDEO
 
 OBJS = $(COMMON_OBJS) $(HARDWARE_VIDEO_ONLY_OBJS)
 # Compiler flags.
-#CFLAGS	=  -O0 -gdwarf-2 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g -DF_h_errno
-CFLAGS	=  $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g -DF_h_errno
 CXXFLAGS = -fno-rtti -Wcast-qual
-ASFLAGS = $(CFLAGS) -c
+CFLAGS	=  -O0 -gdwarf-2 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g -DF_h_errno
 IMG_LIBS    = -ljpeg -lpng -lz
 GU_LIBS	    = -lpspvram -lpspgum_vfpu -lpspvfpu -lpspgu -lpspmath
 AUDIO_LIBS	= -lpspaudiolib -lpspaudio -lpspmp3

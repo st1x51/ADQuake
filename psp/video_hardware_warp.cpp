@@ -571,12 +571,13 @@ void Sky_LoadSkyBox (char *name)
 		if(!(skyimage[i] = loadtextureimage (va("gfx/env/%s%s", name, suf[i]), 0, 0, qfalse, GU_LINEAR)) &&
            !(skyimage[i] = loadtextureimage (va("gfx/env/%s_%s", name, suf[i]), 0, 0, qfalse, GU_LINEAR)))
 		{
-			Con_Printf("Sky: %s[%s] not found, used std\n", name, suf[i]);
+			Con_Printf("Sky: %s[%s] not found, used random texture(conchar maybe)\n", name, suf[i]);
+			/*
 		    if(!(skyimage[i] = loadtextureimage (va("gfx/env/skybox%s", suf[i]), 0, 0, qfalse, GU_LINEAR)))
 		    {
-			    Sys_Error("Sky: std not found!");
+			    Con_Printf("Sky: std not found!");
 			}
-
+			*/
 		}
         Hunk_FreeToLowMark (mark);
     }
