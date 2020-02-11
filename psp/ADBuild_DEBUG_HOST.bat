@@ -1,0 +1,1 @@
+C:\pspsdk\bin\usbhostfs_pc.exe

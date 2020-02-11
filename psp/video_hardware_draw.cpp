@@ -69,6 +69,7 @@ typedef struct
 	texel *ram;
 	texel *vram;
 	
+	int			lhcsum;
 } gltexture_t;
 
 typedef struct
@@ -231,7 +232,7 @@ void GL_Bind (int texture_index)
 	
 	if (texture.mipmaps > 0 && r_mipmaps.value > 0)
 	{
-		int size = (texture.width * texture.height);
+		int size = GL_GetTexSize(texture.format, texture.width, texture.height);
 		int offset = size;
 		int div = 2;
 		
@@ -897,8 +898,13 @@ void GL_Set2D (void)
 	sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
 }
 
-
-static void GL_ResampleTexture(const byte *in, int inwidth, int inheight, unsigned char *out,  int outwidth, int outheight)
+/*
+================
+GL_ResampleTexture
+for 8 bit textures
+================
+*/
+static void GL_ResampleTexture8(const byte *in, int inwidth, int inheight, unsigned char *out,  int outwidth, int outheight)
 {
 	const unsigned int fracstep = inwidth * 0x10000 / outwidth;
 	for (int i = 0; i < outheight ; ++i, out += outwidth)
@@ -909,6 +915,55 @@ static void GL_ResampleTexture(const byte *in, int inwidth, int inheight, unsign
 		{
 			out[j] = inrow[frac >> 16];
 		}
+	}
+}
+
+/*
+================
+GL_ResampleTexture
+for 32 bit textures
+================
+*/
+static void GL_ResampleTexture32 (unsigned *in, int inwidth, int inheight, unsigned *out,  int outwidth, int outheight)
+{
+	int		i, j;
+	unsigned	*inrow, *inrow2;
+	unsigned	frac, fracstep;
+	unsigned	p1[1024], p2[1024];
+	byte		*pix1, *pix2, *pix3, *pix4;
+
+	fracstep = inwidth*0x10000/outwidth;
+
+	frac = fracstep>>2;
+	for (i=0 ; i<outwidth ; i++)
+	{
+		p1[i] = 4*(frac>>16);
+		frac += fracstep;
+	}
+	frac = 3*(fracstep>>2);
+	for (i=0 ; i<outwidth ; i++)
+	{
+		p2[i] = 4*(frac>>16);
+		frac += fracstep;
+	}
+
+	for (i=0 ; i<outheight ; i++, out += outwidth)
+	{
+		inrow = in + inwidth*(int)((i+0.25)*inheight/outheight);
+		inrow2 = in + inwidth*(int)((i+0.75)*inheight/outheight);
+
+		frac = fracstep >> 1;
+		for (j=0 ; j<outwidth ; j++)
+		{
+			pix1 = (byte *)inrow + p1[j];
+			pix2 = (byte *)inrow + p2[j];
+			pix3 = (byte *)inrow2 + p1[j];
+			pix4 = (byte *)inrow2 + p2[j];
+            ((byte *)(out+j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0])>>2;
+			((byte *)(out+j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1])>>2;
+			((byte *)(out+j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2])>>2;
+            ((byte *)(out+j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3])>>2;
+        }
 	}
 }
 
@@ -962,7 +1017,7 @@ void GL_Upload8(int texture_index, const byte *data, int width, int height)
 	}
 
 	// Create a temporary buffer to use as a source for swizzling.
-	std::size_t buffer_size = texture.width * texture.height;
+	std::size_t buffer_size = GL_GetTexSize(texture.format, texture.width, texture.height);
 	std::vector<byte> unswizzled(buffer_size);
 	
 	if (texture.mipmaps > 0) {
@@ -977,7 +1032,7 @@ void GL_Upload8(int texture_index, const byte *data, int width, int height)
 	if (texture.stretch_to_power_of_two)
 	{
 		// Resize.
-		GL_ResampleTexture(data, width, height, &unswizzled[0], texture.width, texture.height);
+		GL_ResampleTexture8(data, width, height, &unswizzled[0], texture.width, texture.height);
 	}
 	else
 	{
@@ -999,7 +1054,7 @@ void GL_Upload8(int texture_index, const byte *data, int width, int height)
 		int div = 2;
 
 		for (int i = 1; i <= texture.mipmaps;i++) {
-			GL_ResampleTexture(data, width, height, &unswizzled[0], texture.width/div, texture.height/div);
+			GL_ResampleTexture8(data, width, height, &unswizzled[0], texture.width/div, texture.height/div);
 			swizzle_fast(texture.ram+offset, &unswizzled[0], texture.width/div, texture.height/div);
 			offset += size/(div*div);
 			div *=2;
@@ -1077,8 +1132,8 @@ void GL_Upload16(int texture_index, const byte *data, int width, int height)
 	}
 
 	// Create a temporary buffer to use as a source for swizzling.
-	const std::size_t buffer_size = texture.width * texture.height * 2;
-    std::vector<byte> unswizzled(buffer_size);
+	const std::size_t buffer_size = GL_GetTexSize(texture.format, texture.width, texture.height);
+	std::vector<byte> unswizzled(buffer_size);
 
 
 	// Straight copy.
@@ -1303,9 +1358,9 @@ void GL_Upload32(int texture_index, const byte *data, int width, int height)
 	// Do we need to resize?
 	if (texture.stretch_to_power_of_two)
 	{
-	   // Resize.
-	   Image_Resample ((void*)data, width, height, &unswizzled[0], texture.width, texture.height, 4, int(r_tex_res.value));
-  	}
+		// Resize.
+		GL_ResampleTexture32((unsigned int*)data, width, height, (unsigned int*)&unswizzled[0], texture.width, texture.height);
+	}
 	else
 	{
 		// Straight copy.
@@ -1323,14 +1378,13 @@ void GL_Upload32(int texture_index, const byte *data, int width, int height)
 
     if (texture.mipmaps > 0)
 	{
-		int size = GL_GetTexSize(GU_PSM_8888, texture.width, texture.height);
+		int size = GL_GetTexSize(texture.format, texture.width, texture.height);
 		int offset = size;
 		int div = 2;
 
 		for (int i = 1; i <= texture.mipmaps;i++)
 		{
-			Image_Resample((void*)data, width, height, &unswizzled[0],
-			texture.width/div, texture.height/div, 4, int(r_tex_res.value));
+			GL_ResampleTexture32((unsigned int*)data, width, height, (unsigned int*)&unswizzled[0], texture.width/div, texture.height/div);
 			swizzle_fast(texture.ram+offset, &unswizzled[0], (texture.width/div) * 4, texture.height/div);
 			offset += size/(div*div);
 			div *=2;
@@ -1383,8 +1437,8 @@ void GL_Upload32toDXT(int texture_index, const byte *data, int width, int height
 	if (texture.stretch_to_power_of_two)
 	{
 	    // Resize.
-	    Image_Resample ((void*)data, width, height, &unswizzled[0], texture.width, texture.height, 4, int(r_tex_res.value));
-  	}
+	  GL_ResampleTexture32((unsigned int*)data, width, height, (unsigned int*)&unswizzled[0], texture.width, texture.height);
+	}
 	else
 	{
 		// Straight copy.
@@ -1484,6 +1538,7 @@ void GL_UnloadTexture(int texture_index)
 		texture.width = 0;
 		texture.height = 0;
 		texture.mipmaps = 0;
+		texture.lhcsum  = 0;
 		texture.palette_active = qfalse;
 		texture.swizzle = GU_FALSE;
 
@@ -1510,10 +1565,20 @@ void GL_UnloadTexture(int texture_index)
 	numgltextures--;
 }
 
+int lhcsumtable[256];
 int GL_LoadTexture (const char *identifier, int width, int height, const byte *data, int bpp, qboolean stretch_to_power_of_two, int filter, int mipmap_level)
 {
+	int	i, s, lhcsum;
 	int texture_index = -1;
-	
+	// occurances. well this isn't exactly a checksum, it's better than that but
+	// not following any standards.
+
+	lhcsum = 0;
+	s = width*height*bpp;
+	for (i = 0;i < 256;i++) 
+          lhcsumtable[i] = i + 1;
+	for (i = 0;i < s;i++) 
+          lhcsum += (lhcsumtable[data[i] & 255]++);	
 	tex_scale_down = r_tex_scale_down.value == qtrue;
 
 	// See if the texture is already present.
@@ -1526,6 +1591,11 @@ int GL_LoadTexture (const char *identifier, int width, int height, const byte *d
 				const gltexture_t& texture = gltextures[i];
 				if (!strcmp (identifier, texture.identifier))
 				{
+ 					if (lhcsum != texture.lhcsum || width != texture.original_width || height != texture.original_height) //Fixed by Crow_bar
+				    {
+				    	Con_DPrintf("GL_LoadTexture: cache mismatch\n");
+						break;
+				    }
 					return i;
 				}
 			}	
@@ -1558,6 +1628,7 @@ int GL_LoadTexture (const char *identifier, int width, int height, const byte *d
 	texture.original_width			= width;
 	texture.original_height			= height;
 	texture.stretch_to_power_of_two	= stretch_to_power_of_two != qfalse;
+	texture.lhcsum                  = lhcsum;
 
 	// Fill in the texture description.
 	switch(bpp)
@@ -1714,8 +1785,15 @@ int GL_LoadTexture (const char *identifier, int width, int height, const byte *d
 
 int GL_LoadPaletteTexture (const char *identifier, int width, int height, const byte *data, byte *palette, int paltype, qboolean stretch_to_power_of_two, int filter, int mipmap_level)
 {
+	int	i, s, lhcsum;
 	int texture_index = -1;
+	// occurances. well this isn't exactly a checksum, it's better than that but
+	// not following any standards.
 
+	lhcsum = 0;
+	s = width*height;
+	for (i = 0;i < 256;i++) lhcsumtable[i] = i + 1;
+	for (i = 0;i < s;i++) lhcsum += (lhcsumtable[data[i] & 255]++);
 	tex_scale_down = r_tex_scale_down.value == qtrue;
 	// See if the texture is already present.
 	if (identifier[0])
@@ -1727,6 +1805,11 @@ int GL_LoadPaletteTexture (const char *identifier, int width, int height, const 
 				const gltexture_t& texture = gltextures[i];
 				if (!strcmp (identifier, texture.identifier))
 				{
+					  if (lhcsum != texture.lhcsum || width != texture.original_width || height != texture.original_height) //Fixed by Crow_bar
+				    {
+				    	Con_DPrintf("GL_LoadTexture: cache mismatch\n");
+				    	break;
+				    }
 					return i;
 				}
 			}
@@ -1758,6 +1841,7 @@ int GL_LoadPaletteTexture (const char *identifier, int width, int height, const 
 	texture.original_width			= width;
 	texture.original_height			= height;
 	texture.stretch_to_power_of_two	= stretch_to_power_of_two != qfalse;
+	texture.lhcsum                  = lhcsum;
 
 	// Fill in the texture description.
 	texture.format			= GU_PSM_T8;
@@ -1838,7 +1922,7 @@ int GL_LoadPaletteTexture (const char *identifier, int width, int height, const 
 	Con_DPrintf("Loading(TUP): %s [%dx%d](%0.2f KB)\n",texture.identifier,texture.width,texture.height, (float) ((texture.width*texture.height)/1024)+(256*sizeof(ScePspRGBA8888)));
 
 	// Allocate the RAM.
-	std::size_t buffer_size = texture.width * texture.height;
+	std::size_t buffer_size = GL_GetTexSize(texture.format, texture.width, texture.height);
 
 	if (texture.mipmaps > 0)
 	{
@@ -1948,7 +2032,7 @@ int GL_LoadTextureLM (const char *identifier, int width, int height, const byte 
 		}
 		
 		// Allocate the RAM.
-		const std::size_t buffer_size = texture.width * texture.height * bpp;
+		const std::size_t buffer_size = GL_GetTexSize(texture.format, texture.width, texture.height);
 		texture.ram	= static_cast<texel*>(memalign(16, buffer_size));
 		if (!texture.ram)
 		{

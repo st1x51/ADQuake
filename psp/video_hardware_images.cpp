@@ -31,8 +31,10 @@ int		    image_width;
 int		    image_height;
 static int  image_palette_type = 0;
 static byte image_palette[1024];
-
-
+#if PNG_LIBPNG_VER < 10400
+/* For compatibility with older libpng */
+#define png_set_expand_gray_1_2_4_to_8  png_set_gray_1_2_4_to_8 
+#endif
 #define	IMAGE_MAX_DIMENSIONS	4096
 
 /*
@@ -732,7 +734,7 @@ byte *LoadPNG (FILE *fin, int matchwidth, int matchheight)
 	}
 
 	if (colortype == PNG_COLOR_TYPE_GRAY && bitdepth < 8)
-		png_set_gray_1_2_4_to_8 (png_ptr);
+		png_set_expand_gray_1_2_4_to_8 (png_ptr);
 
 	if (png_get_valid(png_ptr, pnginfo, PNG_INFO_tRNS))
 		png_set_tRNS_to_alpha (png_ptr);

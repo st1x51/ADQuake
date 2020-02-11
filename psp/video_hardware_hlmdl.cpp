@@ -181,11 +181,13 @@ qboolean Mod_LoadHLModel (model_t *mod, void *buffer)
 
 	model->bonectls = (char *)bonectls - (char *)model;
    // Con_Printf(", bonectls\n");
-
+	int level = 0;
+	if (r_mipmaps.value > 0)
+		level = 3;
 	for(i = 0; i < header->numtextures; i++)
     {
 
-		tex[i].i = GL_LoadPaletteTexture (tex[i].name, tex[i].w, tex[i].h, (byte *) header + tex[i].i,(byte *) header + tex[i].w * tex[i].h + tex[i].i, PAL_RGB, qtrue, GU_LINEAR, 0);
+		tex[i].i = GL_LoadPaletteTexture (tex[i].name, tex[i].w, tex[i].h, (byte *) header + tex[i].i,(byte *) header + tex[i].w * tex[i].h + tex[i].i, PAL_RGB, qtrue, GU_LINEAR, level);
 	    mapTextureNameList.push_back(tex[i].i); // for unload textures
 	}
 //
