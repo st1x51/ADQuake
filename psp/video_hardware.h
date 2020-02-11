@@ -251,6 +251,7 @@ void Sky_NewMap (void);
 void Sky_Init (void);
 void R_DrawSkyBox (void);
 void R_ClearSkyBox (void);
+void UnloadWads (void); //By Crow_bar
 
 typedef struct
 {

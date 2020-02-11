@@ -214,7 +214,7 @@ void Mod_ClearAll (void)
 		mapTextureNameList.pop_front();
 		GL_UnloadTexture(texture_index);
 	}
-
+	UnloadWads();  //Crow_bar
 	solidskytexture	= -1;
 	alphaskytexture	= -1;
 

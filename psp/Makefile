@@ -72,6 +72,7 @@ COMMON_OBJS = \
 
 HARDWARE_VIDEO_ONLY_OBJS = \
 	clipping.o \
+	wad3.o \
 	video_hardware.o \
 	video_hardware_hlmdl.o \
 	video_hardware_draw.o \

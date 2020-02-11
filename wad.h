@@ -79,4 +79,7 @@ int WAD3_LoadTextureName(char *name);
 int ConvertWad3ToRGBA(miptex_t *tex);
 void WAD3_LoadTextureWadFile (char *filename);
 
+void W_LoadTextureWadFileHL (char *filename, int complain);
+byte *W_ConvertWAD3TextureHL(miptex_t *tex);
+byte *W_GetTextureHL(char *name);
 
