@@ -91,17 +91,17 @@ HARDWARE_VIDEO_ONLY_OBJS = \
 VIDEO_FLAGS = -DPSP_HARDWARE_VIDEO
 
 OBJS = $(COMMON_OBJS) $(HARDWARE_VIDEO_ONLY_OBJS)
-
+# Compiler flags.
+#CFLAGS	=  -O0 -gdwarf-2 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g -DF_h_errno
+CFLAGS	=  $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g -DF_h_errno
+CXXFLAGS = -fno-rtti -Wcast-qual
+ASFLAGS = $(CFLAGS) -c
 IMG_LIBS    = -ljpeg -lpng -lz
 GU_LIBS	    = -lpspvram -lpspgum_vfpu -lpspvfpu -lpspgu -lpspmath
 AUDIO_LIBS	= -lpspaudiolib -lpspaudio -lpspmp3
 MISC_LIBS	= -lpsprtc -lpsppower
 STD_LIBS	= -lm -lstdc++ -lc
 LIBS		= $(GU_LIBS) $(AUDIO_LIBS) $(MISC_LIBS) $(IMG_LIBS) $(STD_LIBS)
-
-# Compiler flags.
-CFLAGS	= -ffast-math -O3 -G0 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -DF_h_errno
-CXXFLAGS = -fno-rtti -Wcast-qual
 
 include $(PSPSDK)/lib/build.mak
 

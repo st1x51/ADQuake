@@ -59,21 +59,21 @@ void MaterialsInit(char *name)
 	{
   		// skip whitespace
 		i = 0;
-		while(buffer[i] && isspace(buffer[i]))
+		while(buffer[i] && (isspace(buffer[i]) + '0'))
 			i++;
 
 		if (!buffer[i])
 			continue;
 
 		// skip comment lines
-		if (buffer[i] == '/' || !isalpha(buffer[i]))
+		if (buffer[i] == '/' || (!isalpha(buffer[i]) + '0'))
 			continue;
 
 		// get texture type
 		material_type[material_num] = toupper(buffer[i++]);
 
 		// skip whitespace
-		while(buffer[i] && isspace(buffer[i]))
+		while(buffer[i] && (isspace(buffer[i]) + '0'))
 			i++;
 
 		if (!buffer[i])
@@ -81,7 +81,7 @@ void MaterialsInit(char *name)
 
 		// get sentence name
 		j = i;
-		while (buffer[j] && !isspace(buffer[j]))
+		while (buffer[j] && (!isspace(buffer[j]) + '0'))
 			j++;
 
 		if (!buffer[j])
