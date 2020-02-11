@@ -1146,13 +1146,11 @@ void PF_vtos (void)
 	G_INT(OFS_RETURN) = pr_string_temp - pr_strings;
 }
 
-#ifdef QUAKE2
 void PF_etos (void)
 {
 	sprintf (pr_string_temp, "entity %i", G_EDICTNUM(OFS_PARM0));
 	G_INT(OFS_RETURN) = pr_string_temp - pr_strings;
 }
-#endif
 
 void PF_Spawn (void)
 {
@@ -2589,8 +2587,8 @@ ebfs_builtin_t pr_ebfs_builtins[] =
 	{  64, "TraceToss", PF_TraceToss },
 	{  65, "etos", PF_etos },
 	{  66, "WaterMove", PF_WaterMove },
-	{  65, "etos", PF_etos },
 #endif
+	{  65, "etos", PF_etos },
 	{  67, "movetogoal", SV_MoveToGoal },
 	{  68, "precache_file", PF_precache_file },
 	{  69, "makestatic", PF_makestatic },
