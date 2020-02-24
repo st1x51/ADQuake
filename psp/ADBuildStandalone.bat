@@ -1,2 +1,2 @@
-make -f Makefile ADQ_CUSTOM=1 install
+make -f MakefileCustom install
 pause
