@@ -1944,39 +1944,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 	Hunk_FreeToLowMark (start);
 }
-static int npot(int n) {
-	if(n <=    0) return    0;
-	if(n <=    1) return    1;
-	if(n <=    2) return    2;
-	if(n <=    4) return    4;
-	if(n <=    8) return    8;
-	if(n <=   16) return   16;
-	if(n <=   32) return   32;
-	if(n <=   64) return   64;
-	if(n <=  128) return  128;
-	if(n <=  256) return  256;
-	if(n <=  512) return  512;
-	if(n <= 1024) return 1024;
-	return 0;
-}
 
-static int ppot(int n) {
-	/*
-	if(n <     1) return    0;
-	if(n <     2) return    1;
-	if(n <     4) return    3;
-	if(n <     8) return    4;
-	if(n <    16) return    8;
-	*/
-	if(n <    16) return   16;
-	if(n <    32) return   16;
-	if(n <    64) return   32;
-	if(n <   128) return   64;
-	if(n <   256) return  128;
-	if(n <   512) return  256;
-	if(n <  1024) return  512;
-	return 0;
-}
+//=============================================================================
 /*
 =================
 Mod_LoadSpriteFrame
@@ -1991,8 +1960,8 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 
 	pinframe = (dspriteframe_t *)pin;
 
-	width = ppot(LittleLong (pinframe->width));
-	height = ppot(LittleLong (pinframe->height));
+	width = LittleLong (pinframe->width);
+	height = LittleLong (pinframe->height);
 	size = width * height;
 
 	pspriteframe = static_cast<mspriteframe_t*>(Hunk_AllocName (sizeof (mspriteframe_t),loadname));
