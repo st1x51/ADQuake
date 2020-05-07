@@ -650,7 +650,7 @@ void R_DrawHLModel(entity_t	*curent)
 
     sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
     sceGuShadeModel(GU_SMOOTH);
-	
+	sceGuEnable(GU_FOG);
 	//Con_DPrintf("%s %i\n", sequence->name, model.frame);
 
     sceGumPushMatrix();
@@ -786,6 +786,7 @@ void R_DrawHLModel(entity_t	*curent)
     sceGumPopMatrix();
     sceGumUpdateMatrix();
     sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+	sceGuDisable(GU_FOG);
 }
 
 /*
