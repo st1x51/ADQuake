@@ -126,6 +126,6 @@ void *Cache_Alloc (cache_user_t *c, int size, char *name);
 // wasn't enough room.
 
 void Cache_Report (void);
-
+void* memcpy_vfpu( void* dst, void* src, unsigned int size );
 
 

@@ -175,7 +175,7 @@ namespace quake
 
 			// Calculate and cache the clipping frustum.
 			calculate_frustum(projection_view_matrix, &projection_view_frustum);
-			memcpy(clipping_frustum, projection_view_frustum, sizeof(frustum_t));
+			memcpy_vfpu(clipping_frustum, projection_view_frustum, sizeof(frustum_t));
 
 			__asm__ volatile (
 				"ulv.q	C700, %0\n"	// Load plane into register
@@ -216,7 +216,7 @@ namespace quake
 		void end_brush_model()
 		{
 			// Restore the clipping frustum.
-			memcpy(clipping_frustum, projection_view_frustum, sizeof(frustum_t));
+			memcpy_vfpu(clipping_frustum, projection_view_frustum, sizeof(frustum_t));
 
 			__asm__ volatile (
 				"ulv.q	C700, %0\n"	// Load plane into register

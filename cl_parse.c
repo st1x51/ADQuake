@@ -448,7 +448,7 @@ void CL_KeepaliveMessage (void)
 
 // read messages from server, should just be nops
 	old = net_message;
-	memcpy (olddata, net_message.data, net_message.cursize);
+	memcpy_vfpu (olddata, net_message.data, net_message.cursize);
 	
 	do
 	{
@@ -470,7 +470,7 @@ void CL_KeepaliveMessage (void)
 	} while (ret);
 
 	net_message = old;
-	memcpy (net_message.data, olddata, net_message.cursize);
+	memcpy_vfpu (net_message.data, olddata, net_message.cursize);
 
 // check time
 	time = Sys_FloatTime ();
@@ -982,7 +982,7 @@ void CL_NewTranslation (int slot)
 		Sys_Error ("CL_NewTranslation: slot > cl.maxclients");
 	dest = cl.scores[slot].translations;
 	source = vid.colormap;
-	memcpy (dest, vid.colormap, sizeof(cl.scores[slot].translations));
+	memcpy_vfpu (dest, vid.colormap, sizeof(cl.scores[slot].translations));
 	top = cl.scores[slot].colors & 0xf0;
 	bottom = (cl.scores[slot].colors &15)<<4;
 	
@@ -993,13 +993,13 @@ void CL_NewTranslation (int slot)
 	for (i=0 ; i<VID_GRADES ; i++, dest += 256, source+=256)
 	{
 		if (top < 128)	// the artists made some backwards ranges.  sigh.
-			memcpy (dest + TOP_RANGE, source + top, 16);
+			memcpy_vfpu (dest + TOP_RANGE, source + top, 16);
 		else
 			for (j=0 ; j<16 ; j++)
 				dest[TOP_RANGE+j] = source[top+15-j];
 				
 		if (bottom < 128)
-			memcpy (dest + BOTTOM_RANGE, source + bottom, 16);
+			memcpy_vfpu (dest + BOTTOM_RANGE, source + bottom, 16);
 		else
 			for (j=0 ; j<16 ; j++)
 				dest[BOTTOM_RANGE+j] = source[bottom+15-j];		
