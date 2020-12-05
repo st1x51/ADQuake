@@ -2036,7 +2036,7 @@ void R_ShowBoundingBoxes (void)
 
 	if(r_showbboxes_full.value)
 	   sceGuEnable (GU_DEPTH_TEST);
-	Sbar_Changed (); //so we don't get dots collecting on the statusbar
+	Hud_Changed (); 
 }
 
 void Fog_EnableGFog (void); 

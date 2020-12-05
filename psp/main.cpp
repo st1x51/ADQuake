@@ -31,12 +31,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <psppower.h>
 #include <psprtc.h>
 #include <pspctrl.h>
-
 #include <pspsdk.h>
-
+#include <pspge.h>
+#include <pspsysevent.h>
 extern "C"
 {
 #include "../quakedef.h"
+void VramSetSize(int kb);
 }
 
 #include "battery.hpp"
@@ -226,7 +227,7 @@ void StartUpParams(char **args, int argc, char *cmdlinePath, char *currentDirect
  				res = sceIoDread(dir_fd, p_dir_de);
  				if ((res > 0) && (p_dir_de->d_stat.st_attr & FIO_SO_IFDIR)) {
  					if (!(stricmp(p_dir_de->d_name, ".") == 0 || stricmp(p_dir_de->d_name, "..") == 0 ||
- 					      stricmp(p_dir_de->d_name, "mp3") == 0 || stricmp(p_dir_de->d_name, "id1") == 0)) {
+ 					      stricmp(p_dir_de->d_name, "mp3") == 0 || stricmp(p_dir_de->d_name, "base") == 0)) {
  						dirs[j++] = strdup( p_dir_de->d_name);
  					}
  				}
@@ -432,13 +433,23 @@ char mod_names[2][64];
 
 void InitExtModules (void)
 {
+	sprintf(mod_names[1],"hooks/vramext.prx");
     sprintf(mod_names[0],"hooks/ctrlhook.prx");
 	mod[0] = pspSdkLoadStartModule(mod_names[0], PSP_MEMORY_PARTITION_KERNEL);
+	mod[1] = pspSdkLoadStartModule(mod_names[1], PSP_MEMORY_PARTITION_KERNEL);
+	if(mod[1] >= 0)
+    {
+		VramSetSize(4096); //all vram memory
+		Con_Printf("Vram Size: %i\n", sceGeEdramGetSize());
+    }
+	else
+	{
+        Con_Printf("Vram Extender failed to load %s (%08x)\n", mod_names[0], mod[0]);
+	}
 	if (mod[0] < 0)
 	{
-        Con_Printf("CWBHOOK failed to load %s (%08x)\n", mod_names[0], mod[0]);
+        Con_Printf("CWBHOOK Extender failed to load %s (%08x)\n", mod_names[1], mod[1]);
 	}
-
 	if(mod[0] < 0)
        ctrl_kernel = 0;
 	else
@@ -500,7 +511,7 @@ int user_main(SceSize argc, void* argp)
 	
 	char   path_f[256];
 	strcpy(path_f,currentDirectory);
-	strcat(path_f,"/quake.cmdline");
+	strcat(path_f,"/engine.ini");
 	Sys_ReadCommandLineFile(path_f);
 	
 	char *args[MAX_NUM_ARGVS];

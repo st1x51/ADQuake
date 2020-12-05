@@ -35,7 +35,6 @@ extern "C"
 }
 
 byte		*draw_chars;				// 8*8 graphic characters
-qpic_t		*draw_disc;
 qpic_t		*draw_backtile;
 
 int			translate_texture;
@@ -60,7 +59,7 @@ typedef struct
 	int		height;
 	int 	mipmaps;
 	int     swizzle;
-
+	qboolean islmp;
 	//Palette
 	ScePspRGBA8888 *palette;
 	qboolean palette_active;
@@ -316,48 +315,47 @@ qpic_t	*Draw_CachePic (char *path)
 	int			i;
 	qpic_t		*dat;
 	glpic_t		*gl;
+	char		str[128];
 
+	strcpy (str, path);
 	for (pic=menu_cachepics, i=0 ; i<menu_numcachepics ; pic++, i++)
-		if (!strcmp (path, pic->name))
+		if (!strcmp (str, pic->name))
 			return &pic->pic;
 
 	if (menu_numcachepics == MAX_CACHED_PICS)
 		Sys_Error ("menu_numcachepics == MAX_CACHED_PICS");
+	menu_numcachepics++;
+	strcpy (pic->name, str);
+
 //
 // load the pic from disk
 //
-	if(strcasecmp(COM_FileExtension (path),"lmp"))
+
+	int index = loadtextureimage (str, 0, 0, qfalse, GU_LINEAR);
+	if(index)
 	{
-		int index = loadtextureimage (path, 0, 0, qfalse, GU_LINEAR);
-		if(index != -1)
-		{
-			pic->pic.width  = gltextures[index].original_width;
-			pic->pic.height = gltextures[index].original_height;
+		pic->pic.width  = gltextures[index].original_width;
+		pic->pic.height = gltextures[index].original_height;
 
-			strcpy (pic->name, path);
-			menu_numcachepics++;
+		gltextures[index].islmp = qfalse;
+		gl = (glpic_t *)pic->pic.data;
+		gl->index = index;
 
-			gl = (glpic_t *)pic->pic.data;
-			gl->index = index;
-
-			return &pic->pic;
-		}
-		return NULL;
-    }
-
-    menu_numcachepics++;
-	strcpy (pic->name, path);
-	
-	dat = (qpic_t *)COM_LoadTempFile (path);	
+		return &pic->pic;
+	}
+	dat = (qpic_t *)COM_LoadTempFile (str);
 	if (!dat)
-		Sys_Error ("Draw_CachePic: failed to load %s", path);
+	{
+		//strcat (str, ".lmp"); // st1x51: wrong?
+		dat = (qpic_t *)COM_LoadTempFile (str);
+		if (!dat)
+		{
+			Sys_Error ("Draw_CachePic: failed to load file %s \nyou can load pic in better formats like tga,pcx,bmp,png \n", str);
+			return NULL;
+		}
+	}
 	SwapPic (dat);
 
-	// HACK HACK HACK --- we need to keep the bytes for
-	// the translatable player picture just for the menu
-	// configuration dialog
-	if (!strcmp (path, "gfx/menuplyr.lmp"))
-		memcpy (menuplyr_pixels, dat->data, dat->width*dat->height);
 
 	pic->pic.width = dat->width;
 	pic->pic.height = dat->height;
@@ -365,6 +363,7 @@ qpic_t	*Draw_CachePic (char *path)
 	gl = (glpic_t *)pic->pic.data;
 	gl->index = GL_LoadPicTexture (dat);
 
+	gltextures[gl->index].islmp = qtrue;
 	return &pic->pic;
 }
 
@@ -422,27 +421,11 @@ void Draw_Init (void)
 	char_texture = GL_LoadTexture ("charset", 128, 128, draw_chars, 1, qfalse, GU_NEAREST, 0);
 
 	start = Hunk_LowMark();
-
-	cb = (qpic_t *)COM_LoadTempFile ("gfx/conback.lmp");	
-	if (!cb)
-		Sys_Error ("Couldn't load gfx/conback.lmp");
-	SwapPic (cb);
-
-	// hack the version number directly into the pic
-	sprintf (ver, "(gl %4.2f) %4.2f", (float)GLQUAKE_VERSION, (float)VERSION);
-	dest = cb->data + 320*186 + 320 - 11 - 8*strlen(ver);
-	y = strlen(ver);
-	for (x=0 ; x<y ; x++)
-		Draw_CharToConback (ver[x], dest+(x<<3));
-
-	conback->width = cb->width;
-	conback->height = cb->height;
-	ncdata = cb->data;
-
+	int index = loadtextureimage_hud ("gfx/conback");
 	gl = (glpic_t *)conback->data;
-	gl->index = GL_LoadTexture ("conback", conback->width, conback->height, ncdata, 1, qfalse, GU_LINEAR, 0);
-	conback->width = vid.width;
-	conback->height = vid.height;
+	gl->index = index;
+	conback->width  = gltextures[index].original_width;
+	conback->height = gltextures[index].original_height;
 
 	// free loaded console
 	Hunk_FreeToLowMark(start);
@@ -460,7 +443,6 @@ void Draw_Init (void)
 	//
 	// get the other pics we need
 	//
-	draw_disc = Draw_PicFromWad ("disc");
 	draw_backtile = Draw_PicFromWad ("backtile");
 }
 
@@ -567,8 +549,16 @@ static void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 	vertices[0].z		= 0;
 
 	const gltexture_t& glt = gltextures[gl->index];
-	vertices[1].u		= glt.original_width;
-	vertices[1].v		= glt.original_height;
+	if (gltextures[gl->index].islmp)
+	{
+		vertices[1].u	= glt.original_width;
+		vertices[1].v	= glt.original_height;
+	}
+	else
+	{
+		vertices[1].u 	= glt.width;
+		vertices[1].v 	= glt.height;
+	}
 	vertices[1].x		= x + pic->width;
 	vertices[1].y		= y + pic->height;
 	vertices[1].z		= 0;
@@ -576,7 +566,7 @@ static void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 	sceGuColor(GU_RGBA(0xff, 0xff, 0xff, static_cast<unsigned int>(alpha * 255.0f)));
 	sceGuDrawArray(
 		GU_SPRITES,
-		GU_TEXTURE_16BIT | GU_VERTEX_16BIT | GU_TRANSFORM_2D,
+		GU_TEXTURE_16BIT  | GU_VERTEX_16BIT | GU_TRANSFORM_2D,
 		2, 0, vertices);
     sceGuColor(0xffffffff);
 	if (alpha != 1.0f)
@@ -809,7 +799,7 @@ void Draw_FadeScreen (void)
 
 	sceGuEnable(GU_TEXTURE_2D);
 
-	Sbar_Changed();
+	Hud_Changed();
 }
 
 
@@ -850,37 +840,6 @@ void Draw_FadeScreenColor (int r, int g, int b, int a)
 }
 
 //=============================================================================
-
-/*
-================
-Draw_BeginDisc
-
-Draws the little blue disc in the corner of the screen.
-Call before beginning any disc IO.
-================
-*/
-void Draw_BeginDisc (void)
-{
-	if (!draw_disc)
-		return;
-
-	//glDrawBuffer  (GL_FRONT);
-	Draw_Pic (vid.width - 24, 0, draw_disc);
-	//glDrawBuffer  (GL_BACK);
-}
-
-
-/*
-================
-Draw_EndDisc
-
-Erases the disc icon.
-Call after completing any disc IO
-================
-*/
-void Draw_EndDisc (void)
-{
-}
 
 /*
 ================
@@ -2039,8 +1998,8 @@ int GL_LoadTextureLM (const char *identifier, int width, int height, const byte 
 			Sys_Error("Out of RAM for lightmap textures.");
 		}
 	
-		// Allocate the VRAM.
-		//texture.vram = static_cast<texel*>(valloc(buffer_size));
+		// Allocate the VRAM. st1x51 test
+		texture.vram = static_cast<texel*>(valloc(buffer_size));
 	
 		// Upload the texture.
 		if (bpp == 1)

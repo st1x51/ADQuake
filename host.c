@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "psp/module.h"
-
+#include <pspge.h>
 /*
 
 A server can allways be started, even if the system started out as a client
@@ -899,6 +899,8 @@ void Host_Init (quakeparms_t *parms)
 	Con_Printf ("%4.1f megabyte heap \n",parms->memsize/ (1024*1024.0));
 	Con_Printf ("%4.1f PSP application heap \n",1.0f*PSP_HEAP_SIZE_MB);
 	Con_Printf ("CPU Speed %d MHz\n", currentCPU);
+	int size  = sceGeEdramGetSize();
+    Con_Printf("VRAM size: %i mb\n",size / (1024*1024));
 	R_InitTextures ();		// needed even for dedicated servers
  
 	if (cls.state != ca_dedicated)
@@ -931,14 +933,14 @@ void Host_Init (quakeparms_t *parms)
 
 #endif	// WIN32
 		CDAudio_Init ();
-		Sbar_Init ();
+		Hud_Init ();
 		CL_Init ();
 #ifdef WIN32 // on non win32, mouse comes before video for security reasons
 		IN_Init ();
 #endif
 	}
 
-	Cbuf_InsertText ("exec quake.rc\n");
+	Cbuf_InsertText ("exec adq.rc\n");
 
 	Hunk_AllocName (0, "-HOST_HUNKLEVEL-");
 	host_hunklevel = Hunk_LowMark ();

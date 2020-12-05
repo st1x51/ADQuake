@@ -88,8 +88,6 @@ cvar_t		scr_viewsize = {"viewsize","100", qtrue};
 cvar_t		scr_fov = {"fov","90"};	// 10 - 170
 cvar_t		scr_conspeed = {"scr_conspeed","300"};
 cvar_t		scr_centertime = {"scr_centertime","2"};
-cvar_t		scr_showram = {"showram","1"};
-cvar_t		scr_showturtle = {"showturtle","0"};
 cvar_t		scr_showpause = {"showpause","1"};
 cvar_t		scr_printspeed = {"scr_printspeed","8"};
 
@@ -99,12 +97,7 @@ extern "C"	cvar_t	crosshair;
 
 qboolean	scr_initialized;		// ready to draw
 
-qpic_t		*scr_ram;
-qpic_t		*scr_net;
-qpic_t		*scr_turtle;
-
 int			scr_fullupdate;
-
 int			clearconsole;
 int			clearnotify;
 
@@ -270,7 +263,7 @@ static void SCR_CalcRefdef (void)
 	vid.recalc_refdef = 0;
 
 // force the status bar to redraw
-	Sbar_Changed ();
+	Hud_Changed ();
 
 //========================================
 	
@@ -379,8 +372,6 @@ void SCR_Init (void)
 	Cvar_RegisterVariable (&scr_fov);
 	Cvar_RegisterVariable (&scr_viewsize);
 	Cvar_RegisterVariable (&scr_conspeed);
-	Cvar_RegisterVariable (&scr_showram);
-	Cvar_RegisterVariable (&scr_showturtle);
 	Cvar_RegisterVariable (&scr_showpause);
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
@@ -393,69 +384,7 @@ void SCR_Init (void)
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
 
-	scr_ram = Draw_PicFromWad ("ram");
-	scr_net = Draw_PicFromWad ("net");
-	scr_turtle = Draw_PicFromWad ("turtle");
-
 	scr_initialized = qtrue;
-}
-
-
-
-/*
-==============
-SCR_DrawRam
-==============
-*/
-void SCR_DrawRam (void)
-{
-	if (!scr_showram.value)
-		return;
-
-	if (!r_cache_thrash)
-		return;
-
-	Draw_Pic (scr_vrect.x+32, scr_vrect.y, scr_ram);
-}
-
-/*
-==============
-SCR_DrawTurtle
-==============
-*/
-void SCR_DrawTurtle (void)
-{
-	static int	count;
-	
-	if (!scr_showturtle.value)
-		return;
-
-	if (host_frametime < 0.1)
-	{
-		count = 0;
-		return;
-	}
-
-	count++;
-	if (count < 3)
-		return;
-
-	Draw_Pic (scr_vrect.x, scr_vrect.y, scr_turtle);
-}
-
-/*
-==============
-SCR_DrawNet
-==============
-*/
-void SCR_DrawNet (void)
-{
-	if (realtime - cl.last_received_message < 0.3)
-		return;
-	if (cls.demoplayback)
-		return;
-
-	Draw_Pic (scr_vrect.x+64, scr_vrect.y, scr_net);
 }
 
 /*
@@ -584,7 +513,7 @@ void SCR_SetUpToDrawConsole (void)
 
 	if (clearconsole++ < vid.numpages)
 	{
-		Sbar_Changed ();
+		Hud_Changed ();
 	}
 	else if (clearnotify++ < vid.numpages)
 	{
@@ -683,7 +612,7 @@ void SCR_BeginLoadingPlaque (void)
 
 	scr_drawloading = qtrue;
 	scr_fullupdate = 0;
-	Sbar_Changed ();
+	Hud_Changed ();
 	SCR_UpdateScreen ();
 	scr_drawloading = qfalse;
 
@@ -897,7 +826,7 @@ void SCR_UpdateScreen (void)
 
 	if (scr_drawdialog)
 	{
-		Sbar_Draw ();
+		Hud_Draw ();
 		Draw_FadeScreen ();
 		SCR_DrawNotifyString ();
 		scr_copyeverything = qtrue;
@@ -905,29 +834,26 @@ void SCR_UpdateScreen (void)
 	else if (scr_drawloading)
 	{
 		SCR_DrawLoading ();
-		Sbar_Draw ();
+		Hud_Draw ();
 	}
 	else if (cl.intermission == 1 && key_dest == key_game)
 	{
-		Sbar_IntermissionOverlay ();
+		//Sbar_IntermissionOverlay ();
 	}
 	else if (cl.intermission == 2 && key_dest == key_game)
 	{
-		Sbar_FinaleOverlay ();
+		//Sbar_FinaleOverlay ();
 		SCR_CheckDrawCenterString ();
 	}
 	else
 	{
 		if (crosshair.value)
 			Draw_Character (scr_vrect.x + scr_vrect.width/2 - 4, scr_vrect.y + scr_vrect.height/2 - 4, '+');
-		
-		SCR_DrawRam ();
-		SCR_DrawNet ();
-		SCR_DrawTurtle ();
+	
 		SCR_DrawFPS ();
 		SCR_DrawPause ();
 		SCR_CheckDrawCenterString ();
-		Sbar_Draw ();
+		Hud_Draw ();
 		SHOWLMP_drawall();
 		showstring_drawall();
 		SCR_DrawConsole ();	

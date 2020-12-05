@@ -1681,11 +1681,9 @@ byte *COM_LoadFile (char *path, int usehunk)
 		Sys_Error ("COM_LoadFile: not enough space for %s", path);
 		
 	((byte *)buf)[len] = 0;
-
-	Draw_BeginDisc ();
+	
 	Sys_FileRead (h, buf, len);                     
 	COM_CloseFile (h);
-	Draw_EndDisc ();
 
 	return buf;
 }
@@ -1940,11 +1938,7 @@ void COM_InitFilesystem (void)
 //
 // start up with GAMENAME by default (id1)
 //
-#ifdef ADQ_CUSTOM
-	COM_AddGameDirectory (va("%s/"ADQDIR, basedir) );
-#else
 	COM_AddGameDirectory (va("%s/"GAMENAME, basedir) );
-#endif
 
 	if (COM_CheckParm ("-rogue"))
 		COM_AddGameDirectory (va("%s/rogue", basedir) );

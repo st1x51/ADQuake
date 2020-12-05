@@ -1,133 +1,158 @@
-PSPSDK = $(shell psp-config --pspsdk-path)
-PSPLIBSDIR = $(PSPSDK)/..
-TARGET = Quake
-PSP_EBOOT_TITLE = Quake
-#PSP_EBOOT_ICON = icon.png
-#PSP_EBOOT_PIC1 = pic.png
+# If GPROF is used it builds an ELF, hence the EBOOT needs to be in GAME150
+#USE_GPROF		= 1
+
+# Site specific variables.
+INSTALL_DIR		= $(PSP_MOUNT)/PSP/GAME/Quake
+OBJ_DIR	= ../
+# Compiler specific variables.
+PSPSDK		= $(shell psp-config --pspsdk-path)
+ifeq ($(PSPSDK),)
+$(error PSPSDK wasn't set)
+endif
+PSPLIBSDIR		= $(PSPSDK)/..
+
+# Project specific variables.
+VERSION		= Custom
+SRC_DIR		= ..
+OBJ_DIR		= ../
+TARGET		= $(OBJ_DIR)psp/build/adq
+PSP_EBOOT_TITLE	= ADQuake v$(VERSION)
+PSP_EBOOT_ICON	= pics/icon.png
+PSP_EBOOT_PIC1	= NULL #pics/pic.png
+PSP_EBOOT_SFO	= $(OBJ_DIR)psp/build/PARAM.SFO
+PSP_EBOOT		= $(OBJ_DIR)psp/build/EBOOT.PBP
 PSP_LARGE_MEMORY = 1
-PSP_FW_VERSION = 660
 ifeq ($(USE_GPROF),1)
 GPROF_LIBS      = -lpspprof
 GPROF_FLAGS		= -pg -DPROFILE
 else
 BUILD_PRX		= 1
 endif
-#MODE=-DKERNEL_MODE
-COMMON_OBJS = \
-	cd.o \
-	mp3.o \
-	battery.o \
-	KernelHooks/ctrl/cwbhook_extender.o \
-	input.o \
-	main.o \
-	math.o \
-	sound.o \
-	fnmatch.o \
-	system.o \
-	module.o \
-	network.o \
-	network_infrastructure.o \
-	gethost.o \
-	\
-	../chase.o \
-	../cl_demo.o \
-	../cl_input.o \
-	../cl_main.o \
-	../cl_parse.o \
-	../cl_tent.o \
-	../cmd.o \
-	../common.o \
-	../console.o \
-	../crc.o \
-	../cvar.o \
-	../host.o \
-	../host_cmd.o \
-	../keys.o \
-	../mathlib.o \
-	../matrixlib.o \
-	../menu.o \
-	../net_dgrm.o \
-	../net_loop.o \
-	../net_main.o \
-	../net_vcr.o \
-	../pr_cmds.o \
-	../pr_edict.o \
-	../pr_exec.o \
-	../r_part.o \
-	../snd_dma.o \
-	../snd_mem.o \
-	../snd_mix.o \
-	../snd_dsp_v1.o \
-	../sbar.o \
-	../sv_main.o \
-	../sv_move.o \
-	../sv_phys.o \
-	../sv_user.o \
-	../view.o \
-	../wad.o \
-	../world.o \
-	../zone.o \
-	../random.o \
-	../materials.o
 
-HARDWARE_VIDEO_ONLY_OBJS = \
-	clipping.o \
-	wad3.o \
-	video_hardware.o \
-	video_hardware_hlmdl.o \
-	video_hardware_draw.o \
-	video_hardware_decals.o \
-	video_hardware_resample.o \
-	video_hardware_images.o \
-	video_hardware_dxtn.o \
-	video_hardware_entity_fragment.o \
-	video_hardware_light.o \
-	video_hardware_main.o \
-	video_hardware_mesh.o \
-	video_hardware_misc.o \
-	video_hardware_model.o \
-	video_hardware_screen.o \
-	video_hardware_surface.o \
-	video_hardware_warp.o 
+# Object files used regardless of video back end.
+COMMON_OBJS =  \
+    $(OBJ_DIR)psp/cd.o \
+    $(OBJ_DIR)psp/mp3.o \
+	$(OBJ_DIR)psp/battery.o \
+	$(OBJ_DIR)psp/KernelHooks/ctrl/cwbhook_extender.o \
+	$(OBJ_DIR)psp/VramExt.o \
+	$(OBJ_DIR)psp/input.o \
+	$(OBJ_DIR)psp/main.o \
+	$(OBJ_DIR)psp/math.o \
+	$(OBJ_DIR)psp/sound.o \
+	$(OBJ_DIR)psp/fnmatch.o \
+	$(OBJ_DIR)psp/system.o \
+	$(OBJ_DIR)psp/module.o \
+	$(OBJ_DIR)psp/network.o \
+	$(OBJ_DIR)psp/network_infrastructure.o \
+	$(OBJ_DIR)psp/gethost.o \
+	\
+	$(OBJ_DIR)chase.o \
+	$(OBJ_DIR)cl_demo.o \
+	$(OBJ_DIR)cl_input.o \
+	$(OBJ_DIR)cl_main.o \
+	$(OBJ_DIR)cl_parse.o \
+	$(OBJ_DIR)cl_tent.o \
+	$(OBJ_DIR)cmd.o \
+	$(OBJ_DIR)common.o \
+	$(OBJ_DIR)console.o \
+	$(OBJ_DIR)crc.o \
+	$(OBJ_DIR)cvar.o \
+	$(OBJ_DIR)host.o \
+	$(OBJ_DIR)host_cmd.o \
+	$(OBJ_DIR)keys.o \
+	$(OBJ_DIR)mathlib.o \
+	$(OBJ_DIR)matrixlib.o \
+	$(OBJ_DIR)menu.o \
+	$(OBJ_DIR)net_dgrm.o \
+	$(OBJ_DIR)net_loop.o \
+	$(OBJ_DIR)net_main.o \
+	$(OBJ_DIR)net_vcr.o \
+	$(OBJ_DIR)pr_cmds.o \
+	$(OBJ_DIR)pr_edict.o \
+	$(OBJ_DIR)pr_exec.o \
+	$(OBJ_DIR)r_part.o \
+	$(OBJ_DIR)snd_dma.o \
+	$(OBJ_DIR)snd_mem.o \
+	$(OBJ_DIR)snd_mix.o \
+    $(OBJ_DIR)snd_dsp_v1.o \
+	$(OBJ_DIR)hud.o \
+	$(OBJ_DIR)sv_main.o \
+	$(OBJ_DIR)sv_move.o \
+	$(OBJ_DIR)sv_phys.o \
+	$(OBJ_DIR)sv_user.o \
+	$(OBJ_DIR)view.o \
+	$(OBJ_DIR)wad.o \
+	$(OBJ_DIR)world.o \
+	$(OBJ_DIR)zone.o \
+    $(OBJ_DIR)random.o \
+    $(OBJ_DIR)materials.o
+
+# Object files used only under hardware video.
+VIDEO_OBJS = \
+	$(OBJ_DIR)psp/clipping.o \
+	$(OBJ_DIR)psp/wad3.o \
+	$(OBJ_DIR)psp/video_hardware.o \
+	$(OBJ_DIR)psp/video_hardware_hlmdl.o \
+	$(OBJ_DIR)psp/video_hardware_draw.o \
+	$(OBJ_DIR)psp/video_hardware_decals.o \
+	$(OBJ_DIR)psp/video_hardware_resample.o \
+	$(OBJ_DIR)psp/video_hardware_images.o \
+	$(OBJ_DIR)psp/video_hardware_dxtn.o \
+	$(OBJ_DIR)psp/video_hardware_entity_fragment.o \
+	$(OBJ_DIR)psp/video_hardware_light.o \
+	$(OBJ_DIR)psp/video_hardware_main.o \
+	$(OBJ_DIR)psp/video_hardware_mesh.o \
+	$(OBJ_DIR)psp/video_hardware_misc.o \
+	$(OBJ_DIR)psp/video_hardware_model.o \
+	$(OBJ_DIR)psp/video_hardware_screen.o \
+	$(OBJ_DIR)psp/video_hardware_surface.o \
+	$(OBJ_DIR)psp/video_hardware_warp.o
 VIDEO_FLAGS = -DPSP_HARDWARE_VIDEO
 
-OBJS = $(COMMON_OBJS) $(HARDWARE_VIDEO_ONLY_OBJS)
+OBJS	= $(VIDEO_OBJS) $(COMMON_OBJS) $(GPROF_OBJS)
+
 # Compiler flags.
-CXXFLAGS = -fno-rtti -Wcast-qual
-CFLAGS	=  -O0 -gdwarf-2 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g -DF_h_errno
+CFLAGS	= -ffast-math -O3 -G0 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g
+
+# Libs.
 IMG_LIBS    = -ljpeg -lpng -lz
 GU_LIBS	    = -lpspvram -lpspgum_vfpu -lpspvfpu -lpspgu -lpspmath
 AUDIO_LIBS	= -lpspaudiolib -lpspaudio -lpspmp3
 MISC_LIBS	= -lpsprtc -lpsppower
-STD_LIBS	= -lm -lstdc++ -lc
-LIBS		= $(GU_LIBS) $(AUDIO_LIBS) $(MISC_LIBS) $(IMG_LIBS) $(STD_LIBS)
+STD_LIBS	= -lstdc++ -lm -lc
+LIBS		= $(GPROF_LIBS) $(GU_LIBS) $(AUDIO_LIBS) $(MISC_LIBS) $(IMG_LIBS) $(STD_LIBS)
 
+# All target.
+all: $(PSP_EBOOT)
+
+# What is an install?
+install: $(INSTALL_DIR)EBOOT.PBP
+
+# How to compile an S file.
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.S
+	@echo $(notdir $<)
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+# How to compile a C file.
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@echo $(notdir $<)
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+# How to compile a C++ file.
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	@echo $(notdir $<)
+	@mkdir -p $(dir $@)
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Use the standard PSPSDK build stuff.
 include $(PSPSDK)/lib/build.mak
 
-ifneq ($(VS_PATH),)
-CC       = vs-psp-gcc
-CXX      = vs-psp-g++
-endif
-
-kx-install: kxploit
-ifeq ($(PSP_MOUNT),)
-	@echo '*** Error: $$(PSP_MOUNT) undefined. Please set it to for example /cygdrive/e'
-	@echo if your PSP is mounted to E: in cygwin.
-else
-	cp -r $(TARGET) $(PSP_MOUNT)/PSP/GAME/
-	cp -r $(TARGET)% $(PSP_MOUNT)/PSP/GAME/
-endif
-
-install: EBOOT.PBP
-ifeq ($(PSP_MOUNT),)
-	@echo '*** Error: $$(PSP_MOUNT) undefined. Please set it to for example /cygdrive/e'
-	@echo if your PSP is mounted to E: in cygwin.
-else
-	-mkdir $(PSP_MOUNT)/PSP/GAME/$(TARGET)
-	cp EBOOT.PBP $(PSP_MOUNT)/PSP/GAME/$(TARGET)/
-endif
 ifeq ($(BUILD_PRX),1)
 OBJ_TYPE	= prx
 else
 OBJ_TYPE	= elf
 endif
+

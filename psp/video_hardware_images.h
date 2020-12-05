@@ -28,6 +28,6 @@ int Image_WritePNG (char *filename, int compression, byte *pixels, int width, in
 int Image_WritePNGPLTE (char *filename, int compression, byte *pixels, int width, int height, byte *palette);
 int Image_WriteJPEG (char *filename, int compression, byte *pixels, int width, int height);
 int Image_WritePCX (char *filename, byte *data, int width, int height, byte *palette);
-
+int loadtextureimage_hud (char* filename);
 int loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean complain, int filter);
 

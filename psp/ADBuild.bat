@@ -1,2 +1,2 @@
-make -f Makefile install
+make -f makefile
 pause

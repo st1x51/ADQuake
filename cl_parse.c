@@ -883,7 +883,7 @@ void CL_ParseClientdata (int bits)
 
 	if (cl.items != i)
 	{	// set flash times
-		Sbar_Changed ();
+		Hud_Changed ();
 		for (j=0 ; j<32 ; j++)
 			if ( (i & (1<<j)) && !(cl.items & (1<<j)))
 				cl.item_gettime[j] = cl.time;
@@ -905,7 +905,7 @@ void CL_ParseClientdata (int bits)
 	if (cl.stats[STAT_ARMOR] != i)
 	{
 		cl.stats[STAT_ARMOR] = i;
-		Sbar_Changed ();
+		Hud_Changed ();
 	}
 
 	if (bits & SU_WEAPON)
@@ -915,7 +915,7 @@ void CL_ParseClientdata (int bits)
 	if (cl.stats[STAT_WEAPON] != i)
 	{
 		cl.stats[STAT_WEAPON] = i;
-		Sbar_Changed ();
+		Hud_Changed ();
 	}
 #ifdef ADQ_CUSTOM
 	if (bits & SU_SEQUENCE)
@@ -927,14 +927,14 @@ void CL_ParseClientdata (int bits)
 	if (cl.stats[STAT_HEALTH] != i)
 	{
 		cl.stats[STAT_HEALTH] = i;
-		Sbar_Changed ();
+		Hud_Changed ();
 	}
 
 	i = MSG_ReadByte ();
 	if (cl.stats[STAT_AMMO] != i)
 	{
 		cl.stats[STAT_AMMO] = i;
-		Sbar_Changed ();
+		Hud_Changed ();
 	}
 
 	for (i=0 ; i<4 ; i++)
@@ -943,7 +943,7 @@ void CL_ParseClientdata (int bits)
 		if (cl.stats[STAT_SHELLS+i] != j)
 		{
 			cl.stats[STAT_SHELLS+i] = j;
-			Sbar_Changed ();
+			Hud_Changed ();
 		}
 	}
 
@@ -954,7 +954,7 @@ void CL_ParseClientdata (int bits)
 		if (cl.stats[STAT_ACTIVEWEAPON] != i)
 		{
 			cl.stats[STAT_ACTIVEWEAPON] = i;
-			Sbar_Changed ();
+			Hud_Changed ();
 		}
 	}
 	else
@@ -962,7 +962,7 @@ void CL_ParseClientdata (int bits)
 		if (cl.stats[STAT_ACTIVEWEAPON] != (1<<i))
 		{
 			cl.stats[STAT_ACTIVEWEAPON] = (1<<i);
-			Sbar_Changed ();
+			Hud_Changed ();
 		}
 	}
 }
@@ -1192,7 +1192,7 @@ void CL_ParseServerMessage (void)
 			break;
 		
 		case svc_updatename:
-			Sbar_Changed ();
+			Hud_Changed ();
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatename > MAX_SCOREBOARD");
@@ -1200,7 +1200,7 @@ void CL_ParseServerMessage (void)
 			break;
 			
 		case svc_updatefrags:
-			Sbar_Changed ();
+			Hud_Changed ();
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatefrags > MAX_SCOREBOARD");
@@ -1208,7 +1208,7 @@ void CL_ParseServerMessage (void)
 			break;			
 
 		case svc_updatecolors:
-			Sbar_Changed ();
+			Hud_Changed ();
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatecolors > MAX_SCOREBOARD");
