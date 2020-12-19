@@ -759,7 +759,8 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 	vertices[1].z = 0;
 
 	sceGuDisable(GU_TEXTURE_2D);
-	sceGuColor(GU_RGBA(host_basepal[c*3], host_basepal[c*3+1], host_basepal[c*3+2], 0xff));
+	sceGuColor(c);
+	//sceGuColor(GU_RGBA(host_basepal[c*3], host_basepal[c*3+1], host_basepal[c*3+2], 0xff));
 	sceGuDrawArray(GU_SPRITES, GU_VERTEX_16BIT | GU_TRANSFORM_2D, 2, 0, vertices);
 	sceGuColor(0xffffffff);
 	sceGuEnable(GU_TEXTURE_2D);

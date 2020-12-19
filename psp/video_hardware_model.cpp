@@ -1982,7 +1982,8 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 
 	sprintf (name, "%s_%i", loadmodel->name, framenum);
 
-    if (version == SPRITE_VERSION || version == HLSPRITE_VERSION)
+   // if (version == SPRITE_VERSION || version == HLSPRITE_VERSION)
+   if (version == SPRITE_VERSION)
 	{
        pspriteframe->gl_texturenum = GL_LoadTexture (name, width, height, (byte *)(pinframe + 1), 1, qtrue, GU_LINEAR, 0);
 	}
@@ -1991,14 +1992,14 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
        size *= 4;
 	   pspriteframe->gl_texturenum = GL_LoadTexture (name, width, height, (byte *)(pinframe + 1), 4, qtrue, GU_LINEAR, 0);
 	}
-/*
+
     else if (version == HLSPRITE_VERSION)
 	{
        Con_Printf("HL Sprite TEX - OK\n");
 	   pspriteframe->gl_texturenum = GL_LoadPaletteTexture (name, width, height, (byte *)(pinframe + 1), (byte*)host_basepal, PAL_RGB, qtrue, GU_LINEAR, 0);
 	   Con_Printf("HL Sprite TEX - OK - OK\n");
 	}
-*/
+
 	else
 	{
 	   Sys_Error("Mod_LoadSpriteFrame: Non sprite type");
@@ -2072,9 +2073,7 @@ void * Mod_LoadSpriteGroup (void * pin, mspriteframe_t **ppframe, int framenum, 
 Mod_LoadSpriteModel
 =================
 */
-/*
 extern "C" void Mod_LoadHLSpriteModel (model_t *mod, dspritehl_t   *pin);
-*/
 void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 {
 	int					i;
@@ -2091,11 +2090,9 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 
 	switch (version)
 	{
-/*
       case HLSPRITE_VERSION:
         Mod_LoadHLSpriteModel (mod, (dspritehl_t*)buffer);
         return;
-*/
 	  case SPRITE_VERSION:
       case SPRITE32_VERSION:
 		break;

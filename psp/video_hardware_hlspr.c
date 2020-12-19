@@ -2,7 +2,10 @@
 #include "../quakedef.h"
 #include <malloc.h>
 #include <pspgu.h>
-
+#define SPR_NORMAL					0
+#define SPR_ADDITIVE				1
+#define SPR_INDEXALPHA				2
+#define SPR_ALPHATEST				3
 extern model_t	*loadmodel;
 extern char	 *loadname[32];
 /*
@@ -10,7 +13,7 @@ extern char	 *loadname[32];
 Mod_LoadSpriteFrame
 =================
 */
-dspriteframetype_t* Mod_LoadHLSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum)
+dspriteframetype_t* Mod_LoadHLSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum,byte *pal)
 {
 	dspriteframe_t		*pinframe;
 	mspriteframe_t		*pspriteframe;
@@ -43,7 +46,7 @@ dspriteframetype_t* Mod_LoadHLSpriteFrame (void * pin, mspriteframe_t **ppframe,
 
 	sprintf (name, "%s_%i", loadmodel->name, framenum);
 
-	pspriteframe->gl_texturenum = GL_LoadPaletteTexture (name, width, height, (byte *)(pinframe + 1), (byte*)host_basepal, PAL_RGB, true, GU_LINEAR, 0);
+	pspriteframe->gl_texturenum = GL_LoadPaletteTexture (name, width, height, (byte *)(pinframe + 1), (byte*)pal, PAL_RGBA, true, GU_LINEAR, 0);
 
 	return (dspriteframetype_t*)((byte *)(pinframe + 1) + size);
 }
@@ -54,7 +57,7 @@ dspriteframetype_t* Mod_LoadHLSpriteFrame (void * pin, mspriteframe_t **ppframe,
 Mod_LoadSpriteGroup
 =================
 */
-dspriteframetype_t* Mod_LoadHLSpriteGroup (void * pin, mspriteframe_t **ppframe, int framenum)
+dspriteframetype_t* Mod_LoadHLSpriteGroup (void * pin, mspriteframe_t **ppframe, int framenum,byte *pal)
 {
 	dspritegroup_t		*pingroup;
 	mspritegroup_t		*pspritegroup;
@@ -105,7 +108,7 @@ dspriteframetype_t* Mod_LoadHLSpriteGroup (void * pin, mspriteframe_t **ppframe,
 
 	for (i=0 ; i<numframes ; i++)
 	{
-		ptemp = Mod_LoadHLSpriteFrame (ptemp, &pspritegroup->frames[i], framenum * 100 + i);
+		ptemp = Mod_LoadHLSpriteFrame (ptemp, &pspritegroup->frames[i], framenum * 100 + i,pal);
 	}
 
 	return (dspriteframetype_t*)ptemp;
@@ -125,9 +128,8 @@ void Mod_LoadHLSpriteModel (model_t *mod, dspritehl_t   *pin)
 	dspriteframetype_t	*pframetype;
 	int                 sptype;
 	short               *numi;
-	unsigned char pal[256*4];
-
-	printf("HL_MODEL\n");
+	int 				rendermode;
+	byte pal[256*4];
 
     sptype = LittleLong (pin->type);
 	numframes = LittleLong (pin->numframes);
@@ -137,7 +139,7 @@ void Mod_LoadHLSpriteModel (model_t *mod, dspritehl_t   *pin)
     mod->cache.data = psprite;
 	psprite->type = sptype;
 	mod->synctype = LittleLong (pin->synctype);
-
+	rendermode = LittleLong (pin->texFormat);
 	psprite->numframes = numframes;
     psprite->maxwidth = LittleLong (pin->width);
 
@@ -157,7 +159,7 @@ void Mod_LoadHLSpriteModel (model_t *mod, dspritehl_t   *pin)
 	{
 		Host_Error("%s has wrong number of palette indexes (we only support 256)\n", mod->name);
 	}
-
+/*
 	for (i = 0; i < 256; i++)
 	{
 		pal[i*4+0] = *src++;
@@ -165,7 +167,54 @@ void Mod_LoadHLSpriteModel (model_t *mod, dspritehl_t   *pin)
 		pal[i*4+2] = *src++;
 		pal[i*4+3] = 255;
 	}
-
+	*/
+	Con_Printf("Rendermode: %i",rendermode);
+	switch(rendermode)
+		{
+		case SPR_NORMAL:
+			for (i = 0;i < 256;i++)
+			{
+				pal[i*4+0] = *src++;
+				pal[i*4+1] = *src++;
+				pal[i*4+2] = *src++;
+				pal[i*4+3] = 255;
+			}
+			break;
+		case SPR_ADDITIVE:
+			for (i = 0;i < 256;i++)
+			{
+				pal[i*4+0] = *src++;
+				pal[i*4+1] = *src++;
+				pal[i*4+2] = *src++;
+				pal[i*4+3] = i;
+			}
+			// also passes additive == true to Mod_Sprite_SharedSetup
+			break;
+		case SPR_INDEXALPHA:
+			for (i = 0;i < 256;i++)
+			{
+				pal[i*4+0] = *src++;
+				pal[i*4+1] = *src++;
+				pal[i*4+2] = *src++;
+				pal[i*4+3] = i;
+				src += 3;
+			}
+			break;
+		case SPR_ALPHATEST:
+			for (i = 0;i < 256;i++)
+			{
+				pal[i*4+0] = *src++;
+				pal[i*4+1] = *src++;
+				pal[i*4+2] = *src++;
+				pal[i*4+3] = 255;
+			}
+			pal[255*4+0] = pal[255*4+1] = pal[255*4+2] = pal[255*4+3] = 0;
+			// should this use alpha test or alpha blend?  (currently blend)
+			break;
+		default:
+			Host_Error("Mod_LoadSpriteModel: unknown texFormat (%i, should be 0, 1, 2, or 3)", i);
+			return;
+		}
 	pframetype = (dspriteframetype_t *)(src);
 
 
@@ -189,11 +238,11 @@ void Mod_LoadHLSpriteModel (model_t *mod, dspritehl_t   *pin)
 
 		if (frametype == SPR_SINGLE)
 		{
-			pframetype = Mod_LoadHLSpriteFrame (pframetype + 1, &psprite->frames[i].frameptr, i);
+			pframetype = Mod_LoadHLSpriteFrame (pframetype + 1, &psprite->frames[i].frameptr, i,pal);
 		}
 		else
 		{
-			pframetype = Mod_LoadHLSpriteGroup (pframetype + 1, &psprite->frames[i].frameptr, i);
+			pframetype = Mod_LoadHLSpriteGroup (pframetype + 1, &psprite->frames[i].frameptr, i,pal);
 		}
 		if(pframetype == NULL)
 		   break;
