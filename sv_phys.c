@@ -137,7 +137,12 @@ qboolean SV_RunThink (edict_t *ent)
 	pr_global_struct->time = thinktime;
 	pr_global_struct->self = EDICT_TO_PROG(ent);
 	pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
-	PR_ExecuteProgram (ent->v.think);
+#ifdef USE_PR2
+		if ( sv_vm )
+			PR2_EdictThink();
+		else
+#endif
+			PR_ExecuteProgram(ent->v.think);
 	return !ent->free;
 }
 
@@ -160,14 +165,24 @@ void SV_Impact (edict_t *e1, edict_t *e2)
 	{
 		pr_global_struct->self = EDICT_TO_PROG(e1);
 		pr_global_struct->other = EDICT_TO_PROG(e2);
-		PR_ExecuteProgram (e1->v.touch);
+#ifdef USE_PR2
+		if ( sv_vm )
+			PR2_EdictTouch();
+		else
+#endif
+			PR_ExecuteProgram(e1->v.touch);
 	}
 	
 	if (e2->v.touch && e2->v.solid != SOLID_NOT)
 	{
 		pr_global_struct->self = EDICT_TO_PROG(e2);
 		pr_global_struct->other = EDICT_TO_PROG(e1);
-		PR_ExecuteProgram (e2->v.touch);
+#ifdef USE_PR2
+		if( sv_vm )
+			PR2_EdictTouch();
+		else
+#endif
+			PR_ExecuteProgram(e2->v.touch);
 	}
 
 	pr_global_struct->self = old_self;
@@ -445,7 +460,12 @@ void SV_AddGravity (edict_t *ent)
 #else
 	eval_t	*val;
 
-	val = GetEdictFieldValue(ent, "gravity");
+	val =
+#ifdef USE_PR2
+		PR2_GetEdictFieldValue(ent, "gravity");
+#else
+		GetEdictFieldValue(ent, "gravity");
+#endif
 	if (val && val->_float)
 		ent_gravity = val->_float;
 	else
@@ -638,13 +658,25 @@ edict_t * SV_PushMove (edict_t *pusher, float movetime)
 
 			// if the pusher has a "blocked" function, call it
 			// otherwise, just stay in place until the obstacle is gone
-			if (pusher->v.blocked)
+#ifdef USE_PR2
+			if ( sv_vm )
 			{
-				pr_global_struct->self = EDICT_TO_PROG (pusher);
-				pr_global_struct->other = EDICT_TO_PROG (check);
-				PR_ExecuteProgram (pusher->v.blocked);
-
+				pr_global_struct->self = EDICT_TO_PROG(pusher);
+				pr_global_struct->other = EDICT_TO_PROG(check);
+				PR2_EdictBlocked();
 			}
+			else
+			{
+#endif
+				if (pusher->v.blocked)
+				{
+					pr_global_struct->self = EDICT_TO_PROG(pusher);
+					pr_global_struct->other = EDICT_TO_PROG(check);
+					PR_ExecuteProgram(pusher->v.blocked);
+				}
+#ifdef USE_PR2
+			}
+#endif
 
 			// move back any entities we already moved
 			for (i = 0; i < num_moved; i++)
@@ -785,12 +817,25 @@ edict_t * SV_PushRotate (edict_t *pusher, float movetime)
 
 			// if the pusher has a "blocked" function, call it
 			// otherwise, just stay in place until the obstacle is gone
-			if (pusher->v.blocked)
+#ifdef USE_PR2
+			if ( sv_vm )
 			{
-				pr_global_struct->self = EDICT_TO_PROG (pusher);
-				pr_global_struct->other = EDICT_TO_PROG (check);
-				PR_ExecuteProgram (pusher->v.blocked);
+				pr_global_struct->self = EDICT_TO_PROG(pusher);
+				pr_global_struct->other = EDICT_TO_PROG(check);
+				PR2_EdictBlocked();
 			}
+			else
+			{
+#endif
+				if (pusher->v.blocked)
+				{
+					pr_global_struct->self = EDICT_TO_PROG(pusher);
+					pr_global_struct->other = EDICT_TO_PROG(check);
+					PR_ExecuteProgram(pusher->v.blocked);
+				}
+#ifdef USE_PR2
+			}
+#endif
 
 			// move back any entities we already moved
 			for (i = 0; i < num_moved; i++)
@@ -865,7 +910,12 @@ void SV_Physics_Pusher (edict_t *ent)
 		pr_global_struct->time = sv.time;
 		pr_global_struct->self = EDICT_TO_PROG (ent);
 		pr_global_struct->other = EDICT_TO_PROG (sv.edicts);
-		PR_ExecuteProgram (ent->v.think);
+#ifdef USE_PR2
+		if ( sv_vm )
+			PR2_EdictThink();
+		else
+#endif
+			PR_ExecuteProgram(ent->v.think);
 		if (ent->free)
 			return;
 	}
@@ -1270,7 +1320,12 @@ void SV_Physics_Client (edict_t	*ent, int num)
 //	
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(ent);
-	PR_ExecuteProgram (pr_global_struct->PlayerPreThink);
+#ifdef USE_PR2
+		if ( sv_vm )
+			PR2_GameClientPreThink(0);
+		else
+#endif
+			PR_ExecuteProgram(pr_global_struct->PlayerPreThink);
 	
 //
 // do a move
@@ -1331,7 +1386,12 @@ void SV_Physics_Client (edict_t	*ent, int num)
 
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(ent);
-	PR_ExecuteProgram (pr_global_struct->PlayerPostThink);
+#ifdef USE_PR2
+		if ( sv_vm )
+			PR2_GameClientPostThink(0);
+		else
+#endif
+			PR_ExecuteProgram(pr_global_struct->PlayerPostThink);
 }
 
 //============================================================================
@@ -1710,7 +1770,20 @@ void SV_Physics_Step (edict_t *ent)
 #endif
 
 //============================================================================
+void SV_ProgStartFrame(void)
+{
+	// let the progs know that a new frame has started
+	pr_global_struct->self = EDICT_TO_PROG(sv.edicts);
+	pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
+	pr_global_struct->time = sv.time;
 
+#ifdef USE_PR2
+	if ( sv_vm )
+		PR2_GameStartFrame();
+	else
+#endif
+		PR_ExecuteProgram(pr_global_struct->StartFrame);
+}
 /*
 ================
 SV_Physics
@@ -1721,13 +1794,8 @@ void SV_Physics (void)
 {
 	int		i;
 	edict_t	*ent;
-
 // let the progs know that a new frame has started
-	pr_global_struct->self = EDICT_TO_PROG(sv.edicts);
-	pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
-	pr_global_struct->time = sv.time;
-	PR_ExecuteProgram (pr_global_struct->StartFrame);
-
+	SV_ProgStartFrame ();
 //SV_CheckAllEnts ();
 
 //
@@ -1766,13 +1834,22 @@ void SV_Physics (void)
 		|| ent->v.movetype == MOVETYPE_FLY
 		|| ent->v.movetype == MOVETYPE_FLYMISSILE)
 			SV_Physics_Toss (ent);
+		else if (ent->v.movetype == MOVETYPE_WALK)
+		{
+			if (!SV_RunThink (ent))
+				return;
+			if (!SV_CheckWater (ent) && ! ((int)ent->v.flags & FL_WATERJUMP) )
+				SV_AddGravity (ent);
+			SV_CheckStuck (ent);
+			SV_WalkMove (ent);
+		}
+
 		else
-			Sys_Error ("SV_Physics: bad movetype %i", (int)ent->v.movetype);			
+			Sys_Error ("SV_Physics: bad movetype %i", (int)ent->v.movetype);	
 	}
 	
 	if (pr_global_struct->force_retouch)
 		pr_global_struct->force_retouch--;	
-
 	sv.time += host_frametime;
 }
 

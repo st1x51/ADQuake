@@ -61,8 +61,6 @@ int   		paintedtime; 	// sample PAIRS
 sfx_t		*known_sfx;		// hunk allocated [MAX_SFX]
 int			num_sfx;
 
-sfx_t		*ambient_sfx[NUM_AMBIENTS];
-
 int 		desired_speed = 11025;
 int 		desired_bits = 16;
 
@@ -232,9 +230,6 @@ void S_Init (void)
 
 //	if (shm->buffer)
 //		shm->buffer[4] = shm->buffer[5] = 0x7f;	// force a pop for debugging
-
-	ambient_sfx[AMBIENT_WATER] = S_PrecacheSound ("ambience/water1.wav");
-	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav");
 
 	S_StopAllSounds (true);
 #ifdef DSP2
@@ -657,7 +652,7 @@ void S_UpdateAmbientSounds (void)
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
 	{
 		chan = &channels[ambient_channel];	
-		chan->sfx = ambient_sfx[ambient_channel];
+		//chan->sfx = ambient_sfx[ambient_channel];
 	
 		vol = ambient_level.value * l->ambient_sound_level[ambient_channel];
 		if (vol < 8)
@@ -704,7 +699,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 	VectorCopy(up, listener_up);
 
 // update general area ambient sound sources
-	S_UpdateAmbientSounds ();
+	//S_UpdateAmbientSounds ();
 
 	combine = NULL;
 

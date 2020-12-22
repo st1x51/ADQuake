@@ -68,9 +68,14 @@ COMMON_OBJS =  \
 	$(OBJ_DIR)net_loop.o \
 	$(OBJ_DIR)net_main.o \
 	$(OBJ_DIR)net_vcr.o \
+	$(OBJ_DIR)progs.o \
 	$(OBJ_DIR)pr_cmds.o \
 	$(OBJ_DIR)pr_edict.o \
 	$(OBJ_DIR)pr_exec.o \
+	$(OBJ_DIR)pr2_cmds.o \
+	$(OBJ_DIR)pr2_edict.o \
+	$(OBJ_DIR)pr2_exec.o \
+	$(OBJ_DIR)pr2_vm.o \
 	$(OBJ_DIR)r_part.o \
 	$(OBJ_DIR)snd_dma.o \
 	$(OBJ_DIR)snd_mem.o \
@@ -94,6 +99,7 @@ VIDEO_OBJS = \
 	$(OBJ_DIR)psp/wad3.o \
 	$(OBJ_DIR)psp/video_hardware.o \
 	$(OBJ_DIR)psp/video_hardware_hlmdl.o \
+	$(OBJ_DIR)psp/video_hardware_hlspr.o \
 	$(OBJ_DIR)psp/video_hardware_draw.o \
 	$(OBJ_DIR)psp/video_hardware_decals.o \
 	$(OBJ_DIR)psp/video_hardware_resample.o \
@@ -113,13 +119,13 @@ VIDEO_FLAGS = -DPSP_HARDWARE_VIDEO
 OBJS	= $(VIDEO_OBJS) $(COMMON_OBJS) $(GPROF_OBJS)
 
 # Compiler flags.
-CFLAGS	= -ffast-math -O3 -G0 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g
+CFLAGS	= -ffast-math -O3 -G0 $(GPROF_FLAGS) -Wall -Wno-trigraphs -Winline -DPSP $(VIDEO_FLAGS) -g -DUSE_PR2 -DADQ_CUSTOM
 
 # Libs.
 IMG_LIBS    = -ljpeg -lpng -lz
 GU_LIBS	    = -lpspvram -lpspgum_vfpu -lpspvfpu -lpspgu -lpspmath
 AUDIO_LIBS	= -lpspaudiolib -lpspaudio -lpspmp3
-MISC_LIBS	= -lpsprtc -lpsppower
+MISC_LIBS	= -lpsprtc -lpsppower m33libs/libpspkubridge.a
 STD_LIBS	= -lstdc++ -lm -lc
 LIBS		= $(GPROF_LIBS) $(GU_LIBS) $(AUDIO_LIBS) $(MISC_LIBS) $(IMG_LIBS) $(STD_LIBS)
 

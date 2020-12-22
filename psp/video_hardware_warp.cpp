@@ -918,9 +918,9 @@ void MakeSkyVec (float s, float t, int axis)
 	vec3_t		b;
 	int			j, k;
 
-	b[0] = s*2560;
-	b[1] = t*2560;
-	b[2] = 2560;
+	b[0] = s*r_skyclip.value;
+	b[1] = t*r_skyclip.value;
+	b[2] = r_skyclip.value;
 
 	for (j=0 ; j<3 ; j++)
 	{

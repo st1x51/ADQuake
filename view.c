@@ -294,7 +294,7 @@ void BuildGammaTable (float g)
 	}
 }
 #else
-byte TextureToTexGamma( byte b )
+inline byte TextureToTexGamma( byte b )
 {
 	b = bound( 0, b, 255 );
 	return texgammatable[b];

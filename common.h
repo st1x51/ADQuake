@@ -42,6 +42,8 @@ typedef enum {false, true}	qboolean;
 #endif
 
 #define bound(a, b, c) ((a) >= (c) ? (a) : (b) < (a) ? (a) : (b) > (c) ? (c) : (b))
+#define Q_strnicmp(s1, s2, n) strncasecmp((s1), (s2), (n))
+#define Q_stricmp(s1, s2) strcasecmp((s1), (s2))
 
 //============================================================================
 
@@ -200,6 +202,7 @@ byte *COM_LoadTempFile  (char *path);
 byte *COM_LoadHunkFile  (char *path);
 void  COM_LoadCacheFile (char *path, struct cache_user_s *cu);
 char *COM_MemFgets      (byte *pMemFile, int fileSize, int *filePos, char *pBuffer, int bufferSize );
+char *COM_NextPath (char *prevpath);
 
 qboolean FS_FindFile (char *filename);
 int      FS_FOpenFile (char *filename, FILE **file);

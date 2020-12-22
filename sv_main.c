@@ -204,8 +204,11 @@ void SV_SendServerinfo (client_t *client)
 	else
 		MSG_WriteByte (&client->message, GAME_COOP);
 
-	sprintf (message, pr_strings+sv.edicts->v.message);
-
+	//sprintf (message, pr_strings+sv.edicts->v.message);
+	if(!sv_vm)
+		sprintf (message,PR_GetString(sv.edicts->v.message));
+	else	
+		sprintf (message,PR2_GetString(sv.edicts->v.message));
 	MSG_WriteString (&client->message,message);
 
 	for (s = sv.model_precache+1 ; *s ; s++)
@@ -284,6 +287,11 @@ void SV_ConnectClient (int clientnum)
 	else
 	{
 	// call the progs to get default spawn parms for the new client
+#ifdef USE_PR2
+	if ( sv_vm )
+		PR2_GameSetNewParms();
+	else
+#endif
 		PR_ExecuteProgram (pr_global_struct->SetNewParms);
 		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
@@ -451,7 +459,13 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		if (ent != clent)	// clent is ALLWAYS sent
 		{
 // ignore ents without visible models
-			if (!ent->v.modelindex || !pr_strings[ent->v.model])
+			if (!ent->v.modelindex || !*
+#ifdef USE_PR2
+					PR2_GetString(ent->v.model)
+#else
+					PR_GetString(ent->v.model)
+#endif
+					)
 				continue;
 
 			for (i=0 ; i < ent->num_leafs ; i++)
@@ -622,10 +636,8 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	int		i;
 	edict_t	*other;
 	int		items;
-#ifndef QUAKE2
 	eval_t	*val;
-#endif
-
+	
 //
 // send a damage message
 //
@@ -680,7 +692,12 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 #ifdef QUAKE2
 	items = (int)ent->v.items | ((int)ent->v.items2 << 23);
 #else
-	val = GetEdictFieldValue(ent, "items2");
+	val =
+#ifdef USE_PR2
+		PR2_GetEdictFieldValue(ent, "items2");
+#else
+		GetEdictFieldValue(ent, "items2");
+#endif
 
 	if (val)
 		items = (int)ent->v.items | ((int)val->_float << 23);
@@ -742,8 +759,16 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		MSG_WriteByte (msg, ent->v.weaponframe);
 	if (bits & SU_ARMOR)
 		MSG_WriteByte (msg, ent->v.armorvalue);
+		
 	if (bits & SU_WEAPON)
-		MSG_WriteByte (msg, SV_ModelIndex(pr_strings+ent->v.weaponmodel));
+		MSG_WriteByte (msg, SV_ModelIndex(
+#ifdef USE_PR2
+		PR2_GetString(ent->v.weaponmodel)
+#else
+		PR_GetString(ent->v.weaponmodel)
+#endif
+		));
+
 #ifdef ADQ_CUSTOM
 	if (bits & SU_SEQUENCE)
 		MSG_WriteByte (msg, ent->v.wepsequence);
@@ -793,7 +818,6 @@ qboolean SV_SendClientDatagram (client_t *client)
 	SV_WriteClientdataToMessage (client->edict, &msg);
 
 	SV_WriteEntitiesToClient (client->edict, &msg);
-
 // copy the server datagram if there is space
 	if (msg.cursize + sv.datagram.cursize < msg.maxsize)
 		SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
@@ -882,7 +906,6 @@ void SV_SendClientMessages (void)
 	
 // update frags, names, etc
 	SV_UpdateToReliableMessages ();
-
 // build individual updates
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
 	{
@@ -1020,8 +1043,13 @@ void SV_CreateBaseline (void)
 		else
 		{
 			svent->baseline.colormap = 0;
-			svent->baseline.modelindex =
-				SV_ModelIndex(pr_strings + svent->v.model);
+			svent->baseline.modelindex = SV_ModelIndex(
+#ifdef USE_PR2
+			PR2_GetString(svent->v.model)
+#else
+			PR_GetString(svent->v.model)
+#endif
+			);
 		}
 		
 	//
@@ -1105,7 +1133,12 @@ void SV_SaveSpawnparms (void)
 
 	// call the progs to get default spawn parms for the new client
 		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-		PR_ExecuteProgram (pr_global_struct->SetChangeParms);
+#ifdef USE_PR2
+		if (sv_vm)
+			PR2_GameSetChangeParms();
+		else
+#endif
+			PR_ExecuteProgram (pr_global_struct->SetChangeParms);
 		for (j=0 ; j<NUM_SPAWN_PARMS ; j++)
 			host_client->spawn_parms[j] = (&pr_global_struct->parm1)[j];
 	}
@@ -1129,12 +1162,24 @@ void SV_SpawnServer (char *server)
 {
 	edict_t		*ent;
 	int			i;
-
+	#ifdef USE_PR2
+			char savenames[svs.maxclients][32];
+	#endif
 	// let's not have any servers with no name
 	if (hostname.string[0] == 0)
 		Cvar_Set ("hostname", "UNNAMED");
 	scr_centertime_off = 0;
-
+#ifdef USE_PR2
+//save client names from mod memory before unload mod and clearing VM memory by Hunk_FreeToLowMark
+        memset(savenames,0,sizeof(savenames));
+       	for (i=0 ; i<svs.maxclients ; i++)
+        {
+            if(svs.clients[i].name)
+            	strlcpy(savenames[i],svs.clients[i].name,32);
+        }
+        if( sv_vm )
+        	PR2_GameShutDown();
+#endif
 	Con_DPrintf ("SpawnServer: %s\n",server);
 	svs.changelevel_issued = false;		// now safe to issue another
 
@@ -1172,13 +1217,7 @@ void SV_SpawnServer (char *server)
 		strcpy(sv.startspot, startspot);
 #endif
 
-// load progs to get entity field count
-	PR_LoadProgs ();
 
-// allocate server memory
-	sv.max_edicts = MAX_EDICTS;
-	
-	sv.edicts = Hunk_AllocName (sv.max_edicts*pr_edict_size, "edicts");
 
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
 	sv.datagram.cursize = 0;
@@ -1191,12 +1230,45 @@ void SV_SpawnServer (char *server)
 	sv.signon.maxsize = sizeof(sv.signon_buf);
 	sv.signon.cursize = 0;
 	sv.signon.data = sv.signon_buf;
-	
+// load progs to get entity field count
+#ifdef USE_PR2
+	sv.time = 1.0;
+
+	sv_vm = VM_Load(sv_vm, VM_NATIVE, "progs", sv_syscall ,sv_sys_callex); 
+	if( !sv_vm )
+	{
+#endif
+		Con_Printf ("Load QCVM Code\n");
+		PR_LoadProgs();
+		sv.max_edicts = MAX_EDICTS;
+		sv.edicts = Hunk_AllocName(MAX_EDICTS * pr_edict_size, "edicts");
+#ifdef USE_PR2
+	}else
+	{
+		Con_Printf ("Load Native Code\n");
+		sv.max_edicts = MAX_EDICTS;
+	    PR2_InitProg();
+	}
+#endif	
 // leave slots at start for clients only
 	sv.num_edicts = svs.maxclients+1;
 	for (i=0 ; i<svs.maxclients ; i++)
 	{
 		ent = EDICT_NUM(i+1);
+#ifdef USE_PR2
+//restore client names
+//for -progtype 0 (VM_NONE) names stored in clientnames array
+//for -progtype 1 (VM_NAITVE) and -progtype 2 (VM_BYTECODE)  stored in mod memory
+//do we need this in nq?
+/*
+		if(sv_vm)
+		{
+			svs.clients[i].name = PR2_GetString(ent->v.netname);
+		}else
+		   svs.clients[i].name = clientnames[i];
+		   strlcpy(svs.clients[i].name,savenames[i],32);
+*/
+#endif
 		svs.clients[i].edict = ent;
 	}
 	
@@ -1208,55 +1280,89 @@ void SV_SpawnServer (char *server)
 	strcpy (sv.name, server);
 	sprintf (sv.modelname,"maps/%s.bsp", server);
 	sv.worldmodel = Mod_ForName (sv.modelname, false);
+	//sv.worldmodel = Mod_ForName (sv.modelname, true);
 	if (!sv.worldmodel)
 	{
 		Con_Printf ("Couldn't spawn server %s\n", sv.modelname);
 		sv.active = false;
 		return;
 	}
-	sv.models[1] = sv.worldmodel;
 	
 //
 // clear world interaction links
 //
 	SV_ClearWorld ();
-	
-	sv.sound_precache[0] = pr_strings;
-
-	sv.model_precache[0] = pr_strings;
+#ifdef USE_PR2
+	if ( !sv_vm )
+	{
+#endif
+		sv.sound_precache[0] = pr_strings;
+		sv.model_precache[0] = pr_strings;
+#ifdef USE_PR2
+	}
+	else
+	{
+		sv.sound_precache[0] = "";
+		sv.model_precache[0] = "";
+	}
+#endif
 	sv.model_precache[1] = sv.modelname;
+	sv.models[1] = sv.worldmodel;
 	for (i=1 ; i<sv.worldmodel->numsubmodels ; i++)
 	{
 		sv.model_precache[1+i] = localmodels[i];
 		sv.models[i+1] = Mod_ForName (localmodels[i], false);
 	}
-
 //
 // load the rest of the entities
 //	
 	ent = EDICT_NUM(0);
-	memset (&ent->v, 0, progs->entityfields * 4);
+	//test test
+	//if(sv_vm)
+	//	memset(&ent->v, 0, pr_edict_size - sizeof(edict_t) +sizeof(entvars_t));
+	//else
+	//	memset (&ent->v, 0, progs->entityfields * 4);
 	ent->free = false;
-	ent->v.model = sv.worldmodel->name - pr_strings;
+#ifdef USE_PR2
+	if ( !sv_vm )
+#endif
+		ent->v.model = PR_SetString(sv.worldmodel->name);
+#ifdef USE_PR2
+	else 
+		ent->v.model = PR2_SetString( sv.worldmodel->name);
+		//strlcpy(PR2_GetString(ent->v.model), sv.worldmodel->name, 64);
+#endif
 	ent->v.modelindex = 1;		// world model
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
-
 	if (coop.value)
 		pr_global_struct->coop = coop.value;
 	else
 		pr_global_struct->deathmatch = deathmatch.value;
-
-	pr_global_struct->mapname = sv.name - pr_strings;
+#ifdef USE_PR2
+	if(sv_vm)
+		pr_global_struct->mapname = PR2_SetString(sv.name);
+		//strlcpy((char*)PR2_GetString(pr_global_struct->mapname) , sv.name, 64);
+	else
+#endif
+		pr_global_struct->mapname = sv.name - pr_strings;
 #ifdef QUAKE2
-	pr_global_struct->startspot = sv.startspot - pr_strings;
+		pr_global_struct->startspot = sv.startspot - pr_strings;
 #endif
 
 // serverflags are for cross level information (sigils)
 	pr_global_struct->serverflags = svs.serverflags;
-	
-	ED_LoadFromFile (sv.worldmodel->entities);
-
+	SV_ProgStartFrame ();
+#ifdef USE_PR2
+	if ( !sv_vm )
+#endif
+		ED_LoadFromFile(sv.worldmodel->entities);
+#ifdef USE_PR2
+	else
+	{
+		PR2_LoadEnts(sv.worldmodel->entities);
+	}
+#endif
 	sv.active = true;
 
 // all setup is completed, any further precache statements are errors

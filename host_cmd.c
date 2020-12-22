@@ -1205,7 +1205,14 @@ void Host_Kill_f (void)
 	
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(sv_player);
-	PR_ExecuteProgram (pr_global_struct->ClientKill);
+#ifdef USE_PR2
+	if ( !sv_vm )
+#endif
+		PR_ExecuteProgram(pr_global_struct->ClientKill);
+#ifdef USE_PR2
+	else
+		PR2_ClientCmd();
+#endif
 }
 
 
@@ -1304,12 +1311,23 @@ void Host_Spawn_f (void)
 	{
 		// set up the edict
 		ent = host_client->edict;
-
-		memset (&ent->v, 0, progs->entityfields * 4);
-		ent->v.colormap = NUM_FOR_EDICT(ent);
-		ent->v.team = (host_client->colors & 15) + 1;
-		ent->v.netname = host_client->name - pr_strings;
-
+		if(!sv_vm)
+		{
+			memset (&ent->v, 0, progs->entityfields * 4); //st1x51 test
+			ent->v.colormap = NUM_FOR_EDICT(ent);
+			ent->v.team = (host_client->colors & 15) + 1;
+			ent->v.netname = host_client->name - pr_strings;
+		}
+		else
+		{
+			memset(&ent->v, 0, pr_edict_size - sizeof(edict_t) +
+				sizeof(entvars_t));
+			ent->v.colormap = NUM_FOR_EDICT(ent);
+			ent->v.team = (host_client->colors & 15) + 1;
+			ent->v.netname =  PR2_SetString(host_client->name);
+			//host_client->name = PR2_GetString(ent->v.netname);
+			//strlcpy(PR2_GetString(ent->v.netname), host_client->name, 32);
+		}
 		// copy spawn parms out of the client_t
 
 		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
@@ -1319,12 +1337,26 @@ void Host_Spawn_f (void)
 
 		pr_global_struct->time = sv.time;
 		pr_global_struct->self = EDICT_TO_PROG(sv_player);
-		PR_ExecuteProgram (pr_global_struct->ClientConnect);
+#ifdef USE_PR2
+		if(sv_vm)
+			PR2_GameClientConnect(0);
+		else
+#endif
+			PR_ExecuteProgram (pr_global_struct->ClientConnect);
 
 		if ((Sys_FloatTime() - host_client->netconnection->connecttime) <= sv.time)
 			Sys_Printf ("%s entered the game\n", host_client->name);
-
-		PR_ExecuteProgram (pr_global_struct->PutClientInServer);	
+			
+		// actually spawn the player
+		pr_global_struct->time = sv.time;
+		pr_global_struct->self = EDICT_TO_PROG(sv_player);
+		
+#ifdef USE_PR2
+		if ( sv_vm )
+			PR2_GamePutClientInServer(0);
+		else
+#endif
+			PR_ExecuteProgram(pr_global_struct->PutClientInServer);	
 	}
 
 

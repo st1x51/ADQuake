@@ -149,3 +149,13 @@ void ED_PrintNum (int ent);
 
 eval_t *GetEdictFieldValue(edict_t *ed, char *field);
 
+//
+// PR STrings stuff
+//
+#define MAX_PRSTR 1024
+
+extern char *pr_strtbl[MAX_PRSTR];
+extern int num_prstr;
+
+char *PR_GetString(int num);
+int PR_SetString(char *s);

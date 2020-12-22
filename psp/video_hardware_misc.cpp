@@ -213,6 +213,7 @@ void R_Init (void)
 	Cvar_RegisterVariable (&r_wateralpha);
 	Cvar_RegisterVariable (&r_dynamic);
 	Cvar_RegisterVariable (&r_novis);
+	Cvar_RegisterVariable (&r_nocull);
 	Cvar_RegisterVariable (&r_speeds);
 	Cvar_RegisterVariable (&r_tex_scale_down);
 	Cvar_RegisterVariable (&r_tex_format);
@@ -230,6 +231,7 @@ void R_Init (void)
 	Cvar_RegisterVariable (&r_asynch);
 	Cvar_RegisterVariable (&r_showtris);
 	Cvar_RegisterVariable (&r_loddist);
+	Cvar_RegisterVariable (&r_skyclip);
 	Cvar_RegisterVariable (&gl_keeptjunctions);
 /*
 	Cvar_RegisterVariable (&gl_finish);

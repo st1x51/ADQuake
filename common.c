@@ -1988,4 +1988,23 @@ void COM_InitFilesystem (void)
 		proghack = true;
 }
 
+char *COM_NextPath (char *prevpath)
+{
+	searchpath_t	*s;
+	char			*prev;
 
+	if (!prevpath)
+		return com_gamedir;
+
+	prev = com_gamedir;
+	for (s=com_searchpaths ; s ; s=s->next)
+	{
+		if (s->pack)
+			continue;
+		if (prevpath == prev)
+			return s->filename;
+		prev = s->filename;
+	}
+
+	return NULL;
+}

@@ -629,7 +629,7 @@ int user_main(SceSize argc, void* argp)
 			const float			deltaSeconds	= deltaTicks * oneOverTickRate;
 
 			// Check the battery status.
-			battery::check();
+			//battery::check(); eat fps
 
 			// Run the frame.
 			Host_Frame(deltaSeconds);

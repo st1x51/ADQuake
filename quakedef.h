@@ -280,6 +280,12 @@ typedef struct
 #else
 #endif
 
+#ifdef USE_PR2
+// Angel -->
+#include "pr2_vm.h"
+#include "pr2.h"
+// <-- Angel
+#endif
 //=============================================================================
 
 // the host system specifies the base of the directory tree, the

@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <pspkernel.h>
 #include <psputility.h>
 #include "net_dgrm.h"
-
+#include <pspgu.h>
 extern cvar_t	accesspoint;
 extern cvar_t	r_wateralpha;
 extern cvar_t	r_vsync;
@@ -141,7 +141,8 @@ Draws one solid graphics character
 */
 void M_DrawCharacter (int cx, int line, int num)
 {
-	Draw_Character ( cx + ((vid.width - 320)>>1), line, num);
+	//Draw_Character ( cx + ((vid.width - 320)>>1), line, num);
+	Draw_Character ( cx, line, num);
 }
 
 void M_Print (int cx, int cy, char *str)
@@ -210,57 +211,8 @@ void M_DrawTransPicTranslate (int x, int y, qpic_t *pic)
 
 void M_DrawTextBox (int x, int y, int width, int lines)
 {
-	qpic_t	*p;
-	int		cx, cy;
-	int		n;
-
-	// draw left side
-	cx = x;
-	cy = y;
-	p = Draw_CachePic ("gfx/box_tl.lmp");
-	M_DrawTransPic (cx, cy, p);
-	p = Draw_CachePic ("gfx/box_ml.lmp");
-	for (n = 0; n < lines; n++)
-	{
-		cy += 8;
-		M_DrawTransPic (cx, cy, p);
-	}
-	p = Draw_CachePic ("gfx/box_bl.lmp");
-	M_DrawTransPic (cx, cy+8, p);
-
-	// draw middle
-	cx += 8;
-	while (width > 0)
-	{
-		cy = y;
-		p = Draw_CachePic ("gfx/box_tm.lmp");
-		M_DrawTransPic (cx, cy, p);
-		p = Draw_CachePic ("gfx/box_mm.lmp");
-		for (n = 0; n < lines; n++)
-		{
-			cy += 8;
-			if (n == 1)
-				p = Draw_CachePic ("gfx/box_mm2.lmp");
-			M_DrawTransPic (cx, cy, p);
-		}
-		p = Draw_CachePic ("gfx/box_bm.lmp");
-		M_DrawTransPic (cx, cy+8, p);
-		width -= 2;
-		cx += 16;
-	}
-
-	// draw right side
-	cy = y;
-	p = Draw_CachePic ("gfx/box_tr.lmp");
-	M_DrawTransPic (cx, cy, p);
-	p = Draw_CachePic ("gfx/box_mr.lmp");
-	for (n = 0; n < lines; n++)
-	{
-		cy += 8;
-		M_DrawTransPic (cx, cy, p);
-	}
-	p = Draw_CachePic ("gfx/box_br.lmp");
-	M_DrawTransPic (cx, cy+8, p);
+	Draw_Fill (x-4, y-4, width+8, lines+8,GU_RGBA(200, 0, 10, 200));
+	Draw_Fill (x, y, width, lines,GU_RGBA(232, 167, 53, 200));
 }
 
 void M_DrawCheckbox (int x, int y, int on)
@@ -331,22 +283,36 @@ void M_Menu_Main_f (void)
 	m_entersound = true;
 }
 
-
+#define M_Main_x 16
+#define M_Main_y 16
+#define M_Main_y_ofset 16
 void M_Main_Draw (void)
 {
-	int		f;
-	qpic_t	*p;
-
-	M_DrawTransPic (16, 4, Draw_CachePic ("gfx/qplaque.lmp") );
-	p = Draw_CachePic ("gfx/ttl_main.lmp");
-	M_DrawPic ( (320-p->width)/2, 4, p);
-	M_DrawTransPic (72, 32, Draw_CachePic ("gfx/mainmenu.lmp") );
-
-	f = (int)(host_time * 10)%6;
-
-	M_DrawTransPic (54, 32 + m_main_cursor * 20,Draw_CachePic( va("gfx/menudot%i.lmp", f+1 ) ) );
+	M_PrintWhite(M_Main_x,M_Main_y,"New Game");
+	M_PrintWhite(M_Main_x,M_Main_y + M_Main_y_ofset,"Multiplayer game");
+	M_PrintWhite(M_Main_x,M_Main_y + M_Main_y_ofset * 2,"Options");
+	M_PrintWhite(M_Main_x,M_Main_y + M_Main_y_ofset * 3,"Credits");
+	M_PrintWhite(M_Main_x,M_Main_y + M_Main_y_ofset * 4,"Exit");
+	
+	switch(m_main_cursor)
+	{
+		case 0:
+		M_Print(M_Main_x,M_Main_y,"New Game");
+		break;
+		case 1:
+		M_Print(M_Main_x,M_Main_y + M_Main_y_ofset,"Multiplayer game");
+		break;
+		case 2:
+		M_Print(M_Main_x,M_Main_y + M_Main_y_ofset * 2,"Options");
+		break;
+		case 3:
+		M_Print(M_Main_x,M_Main_y + M_Main_y_ofset * 3,"Credits");
+		break;
+		case 4:
+		M_Print(M_Main_x,M_Main_y + M_Main_y_ofset * 4,"Exit");
+		break;
+	}
 }
-
 
 void M_Main_Key (int key)
 {
@@ -1649,9 +1615,9 @@ void M_Options_Draw (void)
 	float	 r;
 	qpic_t	*p;
 
-	M_DrawTransPic (16, 4, Draw_CachePic ("gfx/qplaque.lmp") );
-	p = Draw_CachePic ("gfx/p_option.lmp");
-	M_DrawPic ( (320-p->width)/2, 4, p);
+	//M_DrawTransPic (16, 4, Draw_CachePic ("gfx/qplaque.lmp") );
+	//p = Draw_CachePic ("gfx/p_option.lmp");
+	//M_DrawPic ( (320-p->width)/2, 4, p);
 
 	M_Print (16, 32+(OPT_CUSTOMIZE*8), "    Customize controls");
 	M_Print (16, 32+(OPT_CONSOLE*8),   "         Go to console");
@@ -2240,7 +2206,7 @@ void M_Quit_Draw (void)
 	M_PrintWhite (16, 172, "Nothing Interactive, Inc. All rights\n");
 	M_PrintWhite (16, 180, "reserved. Press y to exit\n");
 #elif defined PSP
-	M_DrawTextBox (56, 76, 24, 4);
+	M_DrawTextBox (64, 84, 24*8, 4*8);
 	M_Print (64, 84,	"      Really quit?      ");
 	M_Print (64, 92,	"                        ");
 	M_Print (64, 100,	"  Press CROSS to quit,  ");
@@ -2334,9 +2300,9 @@ void M_OSK_Draw (void)
 	y = 20;
 	x = 16;
 
-	M_DrawTextBox (10, 10, 		     26, 10);
-	M_DrawTextBox (10+(26*CHAR_SIZE),    10,  10, 10);
-	M_DrawTextBox (10, 10+(10*CHAR_SIZE),36,  3);
+	M_DrawTextBox (20, 16, 26 * CHAR_SIZE, 10 * CHAR_SIZE);
+//	M_DrawTextBox (10+(26*CHAR_SIZE),    10,  10, 10);
+	M_DrawTextBox (20, (13*CHAR_SIZE),26 * CHAR_SIZE,  8);
 	
 	for(i=0;i<=MAX_Y;i++) 
 	{
@@ -3339,13 +3305,14 @@ int		gameoptions_cursor;
 
 void M_GameOptions_Draw (void)
 {
+	
 	qpic_t	*p;
 	int		x;
-
+	/*
 	M_DrawTransPic (16, 4, Draw_CachePic ("gfx/qplaque.lmp") );
 	p = Draw_CachePic ("gfx/p_multi.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, p);
-
+	*/
 	M_DrawTextBox (152, 32, 10, 1);
 	M_Print (160, 40, "begin game");
 

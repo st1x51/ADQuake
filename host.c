@@ -365,7 +365,12 @@ void SV_DropClient (qboolean crash)
 		// this will set the body to a dead frame, among other things
 			saveSelf = pr_global_struct->self;
 			pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-			PR_ExecuteProgram (pr_global_struct->ClientDisconnect);
+#ifdef USE_PR2
+			if ( sv_vm )
+				PR2_GameClientDisconnect(0);
+			else
+#endif
+				PR_ExecuteProgram(pr_global_struct->ClientDisconnect);
 			pr_global_struct->self = saveSelf;
 		}
 
@@ -875,7 +880,11 @@ void Host_Init (quakeparms_t *parms)
 	Key_Init ();
 	Con_Init ();	
 	M_Init ();	
-	PR_Init ();
+#ifdef USE_PR2
+	PR2_Init();
+#else
+	PR_Init();
+#endif
 	Mod_Init ();
 	NET_Init ();
 	SV_Init ();

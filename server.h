@@ -246,7 +246,7 @@ void SV_ClientPrintf (char *fmt, ...);
 void SV_BroadcastPrintf (char *fmt, ...);
 
 void SV_Physics (void);
-
+void SV_ProgStartFrame (void);
 qboolean SV_CheckBottom (edict_t *ent);
 qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink);
 

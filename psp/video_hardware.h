@@ -181,6 +181,7 @@ extern	cvar_t	r_mirroralpha;
 extern	cvar_t	r_wateralpha;
 extern	cvar_t	r_dynamic;
 extern	cvar_t	r_novis;
+extern	cvar_t	r_nocull;
 extern	cvar_t	r_tex_scale_down;
 extern	cvar_t	r_tex_format;
 extern	cvar_t	r_tex_res;
@@ -202,6 +203,7 @@ extern  cvar_t  r_showbboxes_full;
 extern  cvar_t  r_showtris;
 extern  cvar_t  r_showtris_full;
 extern	cvar_t  r_maxrange;
+extern  cvar_t	r_skyclip;
 extern	cvar_t	gl_keeptjunctions;
 
 extern	int			mirrortexturenum;	// quake texturenum, not gltexturenum
@@ -236,7 +238,8 @@ void EmitSkyPolys (msurface_t *fa);
 void EmitBothSkyLayers (msurface_t *fa);
 void EmitScrollPolys (msurface_t *fa);
 void R_DrawSkyChain (msurface_t *s);
-qboolean R_CullBox (vec3_t mins, vec3_t maxs);
+qboolean R_CullSphere (vec3_t centre, float radius);
+int R_CullBox (vec3_t mins, vec3_t maxs);
 void R_MarkLights (dlight_t *light, int bit, mnode_t *node);
 void R_RotateForEntity (entity_t *e, int shadow);
 void R_BlendedRotateForEntity (entity_t *e, int shadow);

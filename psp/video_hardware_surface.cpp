@@ -975,24 +975,23 @@ void R_DrawBrushModel (entity_t *e)
 	currenttexture = -1;
 
 	clmodel = e->model;
-
+	VectorAdd (e->origin, clmodel->mins, mins);
+	VectorAdd (e->origin, clmodel->maxs, maxs);
 	if (e->angles[0] || e->angles[1] || e->angles[2])
 	{
+		vec3_t	center;
 		rotated = qtrue;
-		for (i=0 ; i<3 ; i++)
-		{
-			mins[i] = (e->origin[i] - clmodel->radius);
-			maxs[i] = (e->origin[i] + clmodel->radius);
-		}
+		VectorAdd (mins, maxs, center);
+		VectorScale (center, 0.5, center);
+		if (R_CullSphere (center, clmodel->radius))
+			return;
 	}
 	else
 	{
 		rotated = qfalse;
-		VectorAdd (e->origin, clmodel->mins, mins);
-		VectorAdd (e->origin, clmodel->maxs, maxs);
 	}
-
-	if (R_CullBox (mins, maxs))
+	
+	if (R_CullBox (mins, maxs) == 2)
 		return;
 
 	memset (lightmap_polys, 0, sizeof(lightmap_polys));
@@ -1162,7 +1161,7 @@ void R_DrawBrushModel (entity_t *e)
 R_RecursiveWorldNode
 ================
 */
-void R_RecursiveWorldNode (mnode_t *node)
+void R_RecursiveWorldNode (mnode_t *node, int cull)
 {
 	int			c, side;
 	mplane_t	*plane;
@@ -1175,8 +1174,12 @@ void R_RecursiveWorldNode (mnode_t *node)
 
 	if (node->visframe != r_visframecount)
 		return;
-	if (R_CullBox (node->minmaxs, node->minmaxs+3))
-		return;
+	if (cull != 1)
+	{
+		cull = R_CullBox (node->minmaxs, node->minmaxs+3);
+		if (cull == 2)
+			return;
+	}
 	
 // if a leaf node, draw stuff
 	if (node->contents < 0)
@@ -1229,7 +1232,7 @@ void R_RecursiveWorldNode (mnode_t *node)
 		side = 1;
 
 // recurse down the children, front side first
-	R_RecursiveWorldNode (node->children[side]);
+	R_RecursiveWorldNode (node->children[side],cull);
 
 // draw stuff
 	c = node->numsurfaces;
@@ -1276,7 +1279,7 @@ void R_RecursiveWorldNode (mnode_t *node)
 	}
 
 // recurse down the back side
-	R_RecursiveWorldNode (node->children[!side]);
+	R_RecursiveWorldNode (node->children[!side],cull);
 }
 
 #if 0
@@ -1432,7 +1435,7 @@ void R_DrawWorld (void)
 	memset (lightmap_polys, 0, sizeof(lightmap_polys));
 
 	R_ClearSkyBox ();
-	R_RecursiveWorldNode (cl.worldmodel->nodes);
+	R_RecursiveWorldNode (cl.worldmodel->nodes,3);
 	DrawTextureChains ();
 	R_BlendLightmaps ();
     if (skybox_name[0])

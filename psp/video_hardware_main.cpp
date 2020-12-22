@@ -103,12 +103,13 @@ cvar_t	r_mipmaps_func     = {"r_mipmaps_func",     "0",   qtrue};
 cvar_t	r_mipmaps_bias     = {"r_mipmaps_bias",     "0",   qtrue};
 cvar_t	r_dynamic          = {"r_dynamic",          "1"         };
 cvar_t	r_novis            = {"r_novis",            "0"         };
+cvar_t	r_nocull           = {"r_nocull",            "0"         };
 cvar_t	r_tex_scale_down   = {"r_tex_scale_down",   "1",   qtrue};
 cvar_t	r_tex_format       = {"r_tex_format",       "4",   qtrue};
 cvar_t	r_tex_res          = {"r_tex_res",          "0",   qtrue};
 cvar_t	r_particles_simple = {"r_particles_simple", "0",   qtrue};
 cvar_t	gl_keeptjunctions  = {"gl_keeptjunctions",  "0"         };
-
+cvar_t  r_skyclip 		   = {"r_skyclip", "2560", qtrue}; 				// Adjust skybox clipping distance
 cvar_t	r_showtris            = {"r_showtris",                "0"};
 cvar_t  r_asynch              = {"r_asynch",                  "0"};
 cvar_t  r_ipolations          = {"r_ipolations",              "0"};
@@ -119,36 +120,111 @@ cvar_t  r_maxrange            = {"r_maxrange",             "4096"}; //render dis
 cvar_t  r_showbboxes          = {"r_showbboxes",              "0"};
 cvar_t  r_showbboxes_full     = {"r_showbboxes_full",         "0",qtrue};
 cvar_t  r_loddist     		  = {"r_loddist",         "256",qtrue};
+
 /*
-cvar_t	gl_finish = {"gl_finish","0"};
-cvar_t	gl_clear = {"gl_clear","0"};
-cvar_t	gl_cull = {"gl_cull","1"};
-cvar_t	gl_texsort = {"gl_texsort","1"};
-cvar_t	gl_smoothmodels = {"gl_smoothmodels","1"};
-cvar_t	gl_affinemodels = {"gl_affinemodels","0"};
-cvar_t	gl_polyblend = {"gl_polyblend","1"};
-cvar_t	gl_flashblend = {"gl_flashblend","1"};
-cvar_t	gl_playermip = {"gl_playermip","0"};
-cvar_t	gl_nocolors = {"gl_nocolors","0"};
-cvar_t	gl_reporttjunctions = {"gl_reporttjunctions","0"};
-cvar_t	gl_doubleeyes = {"gl_doubleeys", "1"};
+=================
+R_CullBox -- replaced with new function from lordhavoc
 
-extern	cvar_t	gl_ztrick;*/
-
+Returns true if the box is completely outside the frustum
+=================
+*/
+/*
+qboolean R_CullBox (vec3_t emins, vec3_t emaxs)
+{
+	int i;
+	mplane_t *p;
+	if (r_nocull.value)
+		return qfalse;
+	for (i = 0;i < 4;i++)
+	{
+		p = frustum + i;
+		switch(p->signbits)
+		{
+		default:
+		case 0:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2] < p->dist)
+				return qtrue;
+			break;
+		case 1:
+			if (p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2] < p->dist)
+				return qtrue;
+			break;
+		case 2:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2] < p->dist)
+				return qtrue;
+			break;
+		case 3:
+			if (p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2] < p->dist)
+				return qtrue;
+			break;
+		case 4:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2] < p->dist)
+				return qtrue;
+			break;
+		case 5:
+			if (p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2] < p->dist)
+				return qtrue;
+			break;
+		case 6:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2] < p->dist)
+				return qtrue;
+			break;
+		case 7:
+			if (p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2] < p->dist)
+				return qtrue;
+			break;
+		}
+	}
+	return qfalse;
+}
+*/
 /*
 =================
 R_CullBox
-
-Returns qtrue if the box is completely outside the frustom
+Returns true if the box is completely outside the frustom
 =================
 */
-qboolean R_CullBox (vec3_t mins, vec3_t maxs)
+int R_CullBox (vec3_t mins, vec3_t maxs)
 {
+	int		result = 1; // Default to "all inside".
 	int		i;
 
+	if (r_nocull.value)
+		return 3;
+
 	for (i=0 ; i<4 ; i++)
-		if (BoxOnPlaneSide (mins, maxs, &frustum[i]) == 2)
+	{
+		const int plane_result = BoxOnPlaneSide(mins, maxs, &frustum[i]);
+		if (plane_result == 2)
+		{
+			return 2;
+		}
+		else if (plane_result == 3)
+		{
+			result = 3;
+		}
+	}
+
+	return result;
+}
+/*
+=================
+R_CullSphere
+
+Returns true if the sphere is completely outside the frustum
+=================
+*/
+qboolean R_CullSphere (vec3_t centre, float radius)
+{
+	int		i;
+	mplane_t	*p;
+
+	for (i=0, p=frustum ; i<4 ; i++, p++)
+	{
+		if (PlaneDiff(centre, p) <= -radius)
 			return qtrue;
+	}
+
 	return qfalse;
 }
 
