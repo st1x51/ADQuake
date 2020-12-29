@@ -135,6 +135,7 @@ void ED_Free (edict_t *ed)
 	ed->v.frame = 0;
 #ifdef ADQ_CUSTOM
 	ed->v.sequence = 0; // 0
+	ed->v.bodygroup = 0;
 //New vars
 	ed->v.renderamt = 0;
 	ed->v.rendermode = 0;

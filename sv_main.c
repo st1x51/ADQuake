@@ -535,6 +535,8 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 //New vars
 		if (ent->baseline.sequence != ent->v.sequence)
 			bits |= U_SEQUENCE;
+		if (ent->baseline.bodygroup != ent->v.bodygroup)
+			bits |= U_BODYGROUP;
 #endif
 		
 		if (ent->baseline.modelindex != ent->v.modelindex)
@@ -589,6 +591,8 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 //New vars
 		if (bits & U_SEQUENCE)
 			MSG_WriteByte (msg, ent->v.sequence);
+		if (bits & U_BODYGROUP)
+			MSG_WriteByte (msg, ent->v.bodygroup);
 #endif
 		if (bits & U_ORIGIN1)
 			MSG_WriteCoord (msg, ent->v.origin[0]);		
@@ -1029,6 +1033,7 @@ void SV_CreateBaseline (void)
 		svent->baseline.skin = svent->v.skin;
 #ifdef ADQ_CUSTOM
 		svent->baseline.sequence = svent->v.sequence;
+		svent->baseline.bodygroup = svent->v.bodygroup;
 //New vars
 		svent->baseline.renderamt = svent->v.renderamt;
 		svent->baseline.rendermode = svent->v.rendermode;
@@ -1064,6 +1069,7 @@ void SV_CreateBaseline (void)
 		MSG_WriteByte (&sv.signon, svent->baseline.skin);
 #ifdef ADQ_CUSTOM
 		MSG_WriteByte (&sv.signon, svent->baseline.sequence);
+		MSG_WriteByte (&sv.signon, svent->baseline.bodygroup);
 //New vars
        MSG_WriteByte (&sv.signon, svent->baseline.renderamt);
        MSG_WriteByte (&sv.signon, svent->baseline.rendermode);
