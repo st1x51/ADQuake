@@ -724,6 +724,7 @@ void R_DrawHLModel(entity_t	*curent)
         hlmdl_bodypart_t	*bodypart = (hlmdl_bodypart_t *) ((byte *) model.header + model.header->bodypartindex) +
                                      b;
         int					bodyindex = (0 / bodypart->base) % bodypart->nummodels;
+		bodyindex = curent->bodygroup;
 		if(( numLods = StudioCheckLOD(&model)) != 0 )
 		{
 			// set derived LOD
