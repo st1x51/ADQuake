@@ -248,22 +248,12 @@ void BOPS_Error (void)
 {
 	Sys_Error ("BoxOnPlaneSide:  Bad signbits");
 }
-
-/*
-==================
-BoxOnPlaneSide
-
-Returns 1, 2, or 1 + 2
-==================
-*/
-int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, mplane_t *p)
+int BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, mplane_t *p)
 {
-	float	dist1, dist2;
-	int		sides;
+	float	dist[2];
+	int		sides, b, i;
 
-#if 0	// this is done by the BOX_ON_PLANE_SIDE macro before calling this
-		// function
-// fast axial cases
+	// fast axial cases
 	if (p->type < 3)
 	{
 		if (p->dist <= emins[p->type])
@@ -272,65 +262,86 @@ int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, mplane_t *p)
 			return 2;
 		return 3;
 	}
-#endif
-	
-// general case
-	switch (p->signbits)
+
+	// general case
+	dist[0] = dist[1] = 0;
+	if (p->signbits < 8) // >= 8: default case is original code (dist[0]=dist[1]=0)
 	{
-	case 0:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		break;
-	case 1:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-		break;
-	case 2:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		break;
-	case 3:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-		break;
-	case 4:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		break;
-	case 5:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
-		break;
-	case 6:
-dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		break;
-	case 7:
-dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
-dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
-		break;
-	default:
-		dist1 = dist2 = 0;		// shut up compiler
-#ifdef PARANOID
-		BOPS_Error ();
-#endif
-		break;
+		for (i=0 ; i<3 ; i++)
+		{
+			b = (p->signbits >> i) & 1;
+			dist[ b] += p->normal[i]*emaxs[i];
+			dist[!b] += p->normal[i]*emins[i];
+		}
 	}
 
 	sides = 0;
-	if (dist1 >= p->dist)
+	if (dist[0] >= p->dist)
 		sides = 1;
-	if (dist2 < p->dist)
+	if (dist[1] < p->dist)
 		sides |= 2;
-
-#ifdef PARANOID
-	if (sides == 0)
-		Sys_Error ("BoxOnPlaneSide: sides==0");
-#endif
 
 	return sides;
 }
+/*
+==================
+BoxOnPlaneSide
+Returns 1, 2, or 1 + 2
+==================
+*/
+int BoxOnPlaneSide_xa( vec3_t emins, vec3_t emaxs, mplane_t *p )
+{
+	float	dist1, dist2;
+	int	sides = 0;
 
+	// general case
+	switch( p->signbits )
+	{
+	case 0:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 1:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		break;
+	case 2:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 3:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		break;
+	case 4:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 5:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2];
+		break;
+	case 6:
+		dist1 = p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	case 7:
+		dist1 = p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2];
+		dist2 = p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2];
+		break;
+	default:
+		// shut up compiler
+		dist1 = dist2 = 0;
+		break;
+	}
+
+	if( dist1 >= p->dist )
+		sides = 1;
+	if( dist2 < p->dist )
+		sides |= 2;
+
+	return sides;
+}
 void vectoangles (vec3_t vec, vec3_t ang)
 {
 	float	forward, yaw, pitch;

@@ -230,9 +230,9 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 			bl = blocklights;
 			for (i=0 ; i<size ; i++) // LordHavoc: original code
 			{
-				*bl++ += TextureToTexGamma(*lightmap++) * scale;
-				*bl++ += TextureToTexGamma(*lightmap++) * scale;
-				*bl++ += TextureToTexGamma(*lightmap++) * scale;
+				*bl++ += *lightmap++ * scale;
+				*bl++ += *lightmap++ * scale;
+				*bl++ += *lightmap++ * scale;
 			}
 		}
     }
@@ -691,7 +691,7 @@ void R_RenderBrushPoly (msurface_t *fa)
 			DrawGLPoly (fa->polys);
     }
 //Crow_bar Decals
-	DrawSurfaceDecals(fa);
+	//DrawSurfaceDecals(fa);
 	
 	if( fa->flags & SURF_DRAWTILED )
 		return; // no lightmaps anyway

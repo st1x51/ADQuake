@@ -1,5 +1,6 @@
 /*
 Copyright (C) 2007 Peter Mackay and Chris Swindle.
+Copyright (C) 2020 Sergey Galushko
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -82,77 +83,107 @@ namespace quake
 
 		static inline void calculate_frustum(const ScePspFMatrix4& clip, frustum_t* frustum)
 		{
-#if CLIP_NEAR
-			/* Extract the NEAR plane */
-			plane_type* const near = &(*frustum)[plane_index_near];
-			near->x = clip.x.w + clip.x.z;
-			near->y = clip.y.w + clip.y.z;
-			near->z = clip.z.w + clip.z.z;
-			near->w = clip.w.w + clip.w.z;
-
-			/* Normalize the result */
-			math::normalise(near);
-#endif
-
-#if CLIP_FAR
-			/* Extract the FAR plane */
-			plane_type* const far = &(*frustum)[plane_index_far];
-			far->x = clip.x.w - clip.x.z;
-			far->y = clip.y.w - clip.y.z;
-			far->z = clip.z.w - clip.z.z;
-			far->w = clip.w.w - clip.w.z;
-
-			/* Normalize the result */
-			math::normalise(far);
-#endif
-
-#if CLIP_LEFT
-			/* Extract the numbers for the LEFT plane */
-			plane_type* const left = &(*frustum)[plane_index_left];
-			left->x = clip.x.w + clip.x.x;
-			left->y = clip.y.w + clip.y.x;
-			left->z = clip.z.w + clip.z.x;
-			left->w = clip.w.w + clip.w.x;
-
-			/* Normalize the result */
-			math::normalise(left);
-#endif
-
-#if CLIP_RIGHT
-			/* Extract the numbers for the RIGHT plane */
-			plane_type* const right = &(*frustum)[plane_index_right];
-			right->x = clip.x.w - clip.x.x;
-			right->y = clip.y.w - clip.y.x;
-			right->z = clip.z.w - clip.z.x;
-			right->w = clip.w.w - clip.w.x;
-
-			/* Normalize the result */
-			math::normalise(right);
-#endif
-
-#if CLIP_BOTTOM
-			/* Extract the BOTTOM plane */
-			plane_type* const bottom = &(*frustum)[plane_index_bottom];
-			bottom->x = clip.x.w + clip.x.y;
-			bottom->y = clip.y.w + clip.y.y;
-			bottom->z = clip.z.w + clip.z.y;
-			bottom->w = clip.w.w + clip.w.y;
-
-			/* Normalize the result */
-			math::normalise(bottom);
-#endif
-
-#if CLIP_TOP
-			/* Extract the TOP plane */
-			plane_type* const top = &(*frustum)[plane_index_top];
-			top->x = clip.x.w - clip.x.y;
-			top->y = clip.y.w - clip.y.y;
-			top->z = clip.z.w - clip.z.y;
-			top->w = clip.w.w - clip.w.y;
-
-			/* Normalize the result */
-			math::normalise(top);
-#endif
+			__asm__ volatile (
+				".set		push\n"					// save assembler option
+				".set		noreorder\n"			// suppress reordering
+		#if CLIP_NEAR_FAR
+				"lv.q		C000,  0(%6)\n"			// C000 = matrix->x
+				"lv.q		C010, 16(%6)\n"			// C010 = matrix->y
+				"lv.q		C020, 32(%6)\n"			// C020 = matrix->z
+				"lv.q		C030, 48(%6)\n"			// C030 = matrix->w
+		#else
+				"lv.q		C000,  0(%4)\n"			// C000 = matrix->x
+				"lv.q		C010, 16(%4)\n"			// C010 = matrix->y
+				"lv.q		C020, 32(%4)\n"			// C020 = matrix->z
+				"lv.q		C030, 48(%4)\n"			// C030 = matrix->w
+		#endif
+				/* Extract the BOTTOM plane */
+				"vadd.s		S100, S003, S001\n"		// S100 = matrix->x.w + matrix->x.y
+				"vadd.s		S101, S013, S011\n"		// S101 = matrix->y.w + matrix->y.y
+				"vadd.s		S102, S023, S021\n"		// S102 = matrix->z.w + matrix->z.y
+				"vadd.s		S103, S033, S031\n"		// S103 = matrix->w.w + matrix->w.y
+				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
+				"vzero.s	S111\n"					// S111 = 0
+				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
+				"vrsq.s		S110, S110\n"			// S110 = 1.0 / sqrt( S110 )
+				"vcmovt.s	S110, S111, 0\n"		// if ( CC[0] ) S110 = S111
+				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
+				"sv.q		C100, %0\n"				// Store plane from register
+				/* Extract the LEFT plane */
+				"vadd.s		S100, S003, S000\n"		// S100 = matrix->x.w + matrix->x.x
+				"vadd.s		S101, S013, S010\n"		// S101 = matrix->y.w + matrix->y.x
+				"vadd.s		S102, S023, S020\n"		// S102 = matrix->z.w + matrix->z.x
+				"vadd.s		S103, S033, S030\n"		// S103 = matrix->w.w + matrix->w.x
+				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
+				"vzero.s	S111\n"					// S111 = 0
+				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
+				"vrsq.s		S110, S110\n"			// S110 = 1.0 / sqrt( S110 )
+				"vcmovt.s	S110, S111, 0\n"		// if ( CC[0] ) S110 = S111
+				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
+				"sv.q		C100, %1\n"				// Store plane from register
+				/* Extract the RIGHT plane */
+				"vsub.s		S100, S003, S000\n"		// S100 = matrix->x.w - matrix->x.x
+				"vsub.s		S101, S013, S010\n"		// S101 = matrix->y.w - matrix->y.x
+				"vsub.s		S102, S023, S020\n"		// S102 = matrix->z.w - matrix->z.x
+				"vsub.s		S103, S033, S030\n"		// S103 = matrix->w.w - matrix->w.x	
+				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
+				"vzero.s	S111\n"					// S111 = 0
+				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
+				"vrsq.s		S110, S110\n"			// S110 = 1.0 / sqrt( S110 )
+				"vcmovt.s	S110, S111, 0\n"		// if ( CC[0] ) S110 = S111
+				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
+				"sv.q		C100, %2\n"				// Store plane from register	
+				/* Extract the TOP plane */
+				"vsub.s		S100, S003, S001\n"		// S100 = matrix->x.w - matrix->x.y
+				"vsub.s		S101, S013, S011\n"		// S101 = matrix->y.w - matrix->y.y
+				"vsub.s		S102, S023, S021\n"		// S102 = matrix->z.w - matrix->z.y
+				"vsub.s		S103, S033, S031\n"		// S103 = matrix->w.w - matrix->w.y	
+				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
+				"vzero.s	S111\n"					// S111 = 0
+				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
+				"vrsq.s		S110, S110\n"			// S110 = 1.0 / sqrt( S110 )
+				"vcmovt.s	S110, S111, 0\n"		// if ( CC[0] ) S110 = S111
+				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
+				"sv.q		C100, %3\n"				// Store plane from register	
+		#if CLIP_NEAR_FAR
+				/* Extract the NEAR plane */
+				"vadd.s		S100, S003, S002\n"		// S100 = matrix->x.w + matrix->x.z
+				"vadd.s		S101, S013, S012\n"		// S101 = matrix->y.w + matrix->y.z
+				"vadd.s		S102, S023, S022\n"		// S102 = matrix->z.w + matrix->z.z
+				"vadd.s		S103, S033, S032\n"		// S103 = matrix->w.w + matrix->w.z	
+				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
+				"vzero.s	S111\n"					// S111 = 0
+				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
+				"vrsq.s		S110, S110\n"			// S110 = 1.0 / sqrt( S110 )
+				"vcmovt.s	S110, S111, 0\n"		// if ( CC[0] ) S110 = S111
+				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
+				"sv.q		C100, %4\n"				// Store plane from register	
+				/* Extract the FAR plane */
+				"vsub.s		S100, S003, S002\n"		// S100 = clip->x.w - clip->x.z
+				"vsub.s		S101, S013, S012\n"		// S101 = clip->y.w - clip->y.z
+				"vsub.s		S102, S023, S022\n"		// S102 = clip->z.w - clip->z.z
+				"vsub.s		S103, S033, S032\n"		// S103 = clip->w.w - clip->w.z	
+				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
+				"vzero.s	S111\n"					// S111 = 0
+				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
+				"vrsq.s		S110, S110\n"			// S110 = 1.0 / sqrt( S110 )
+				"vcmovt.s	S110, S111, 0\n"		// if ( CC[0] ) S110 = S111
+				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
+				"sv.q		C100, %5\n"				// Store plane from register
+		#endif
+				".set		pop\n"					// Restore assembler option
+				:	"=m"( ( *frustum )[plane_index_bottom] ),
+					"=m"( ( *frustum )[plane_index_left] ),
+					"=m"( ( *frustum )[plane_index_right] ),
+		#if CLIP_NEAR_FAR
+					"=m"( ( *frustum )[plane_index_top] ),
+					"=m"( ( *frustum )[plane_index_near] ),
+					"=m"( ( *frustum )[plane_index_far] )
+		#else
+					"=m"( ( *frustum )[plane_index_top] )
+		#endif
+				:	"r"( &clip )
+			);
 		}
 
 		void begin_frame()
@@ -175,17 +206,25 @@ namespace quake
 
 			// Calculate and cache the clipping frustum.
 			calculate_frustum(projection_view_matrix, &projection_view_frustum);
-			memcpy_vfpu(clipping_frustum, projection_view_frustum, sizeof(frustum_t));
 
 			__asm__ volatile (
-				"ulv.q	C700, %0\n"	// Load plane into register
-				"ulv.q	C710, %1\n"	// Load plane into register
-				"ulv.q	C720, %2\n"	// Load plane into register
-				"ulv.q	C730, %3\n"	// Load plane into register
-				:: "m"(clipping_frustum[0]),"m"(clipping_frustum[1]),"m"(clipping_frustum[2]),"m"(clipping_frustum[3])
+				"ulv.q		C700, %4\n"				// Load plane into register
+				"ulv.q		C710, %5\n"				// Load plane into register
+				"ulv.q		C720, %6\n"				// Load plane into register
+				"ulv.q		C730, %7\n"				// Load plane into register
+				"sv.q		C700, %0\n"				// Store plane from register
+				"sv.q		C710, %1\n"				// Store plane from register
+				"sv.q		C720, %2\n"				// Store plane from register
+				"sv.q		C730, %3\n"				// Store plane from register
+				:	"=m"( clipping_frustum[plane_index_bottom] ),
+					"=m"( clipping_frustum[plane_index_left] ),
+					"=m"( clipping_frustum[plane_index_right] ),
+					"=m"( clipping_frustum[plane_index_top] )
+				:	"m"( projection_view_frustum[plane_index_bottom] ),
+					"m"( projection_view_frustum[plane_index_left] ),
+					"m"( projection_view_frustum[plane_index_right] ),
+					"m"( projection_view_frustum[plane_index_top] )
 			);
-
-
 		}
 
 		void begin_brush_model()
@@ -206,117 +245,69 @@ namespace quake
 				"ulv.q	C710, %1\n"	// Load plane into register
 				"ulv.q	C720, %2\n"	// Load plane into register
 				"ulv.q	C730, %3\n"	// Load plane into register
-				:: "m"(clipping_frustum[0]),
-					"m"(clipping_frustum[1]),
-					"m"(clipping_frustum[2]), 
-					"m"(clipping_frustum[3])
+				:: "m"(clipping_frustum[plane_index_bottom]),
+					"m"(clipping_frustum[plane_index_left]),
+					"m"(clipping_frustum[plane_index_right]), 
+					"m"(clipping_frustum[plane_index_top])
 			);
 		}
 
 		void end_brush_model()
 		{
 			// Restore the clipping frustum.
-			memcpy_vfpu(clipping_frustum, projection_view_frustum, sizeof(frustum_t));
-
 			__asm__ volatile (
-				"ulv.q	C700, %0\n"	// Load plane into register
-				"ulv.q	C710, %1\n"	// Load plane into register
-				"ulv.q	C720, %2\n"	// Load plane into register
-				"ulv.q	C730, %3\n"	// Load plane into register
-				:: "m"(clipping_frustum[0]),
-					"m"(clipping_frustum[1]),
-					"m"(clipping_frustum[2]), 
-					"m"(clipping_frustum[3])
+				"ulv.q		C700, %4\n"				// Load plane into register
+				"ulv.q		C710, %5\n"				// Load plane into register
+				"ulv.q		C720, %6\n"				// Load plane into register
+				"ulv.q		C730, %7\n"				// Load plane into register
+				"sv.q		C700, %0\n"				// Store plane from register
+				"sv.q		C710, %1\n"				// Store plane from register
+				"sv.q		C720, %2\n"				// Store plane from register
+				"sv.q		C730, %3\n"				// Store plane from register
+				:	"=m"( clipping_frustum[plane_index_bottom] ),
+					"=m"( clipping_frustum[plane_index_left] ),
+					"=m"( clipping_frustum[plane_index_right] ),
+					"=m"( clipping_frustum[plane_index_top] )
+				:	"m"( projection_view_frustum[plane_index_bottom] ),
+					"m"( projection_view_frustum[plane_index_left] ),
+					"m"( projection_view_frustum[plane_index_right] ),
+					"m"( projection_view_frustum[plane_index_top] )
 			);
-		}
-
-		// Is a point on the front side of the plane?
-		static inline bool point_in_front_of_plane(const vec3_t point, const plane_type& plane)
-		{
-			return ((plane.x * point[0]) + (plane.y * point[1]) + (plane.z * point[2]) + plane.w) > 0.0f;
 		}
 
 		// Is clipping required?
 		bool is_clipping_required(const struct glvert_s* vertices, std::size_t vertex_count)
 		{
-			float out1, out2, out3, out4;
-			const glvert_t* const	last_vertex	= &vertices[vertex_count];
-
-			// For each vertex...
-			for (const glvert_t* vertex = vertices; vertex != last_vertex; ++vertex)
-			{
-				__asm__ volatile (
-					"ulv.q	C610, %4\n"			// Load vertex into register
-					"vone.s	S613\n"				// Now set the 4th entry to be 1 as that is just random
-					"vdot.q	S620, C700, C610\n"	// s620 = vertex->xyx . frustrum[0]
-					"vdot.q	S621, C710, C610\n"	// s621 = vertex->xyx . frustrum[1]
-					"vdot.q	S622, C720, C610\n"	// s622 = vertex->xyx . frustrum[2]
-					"vdot.q	S623, C730, C610\n"	// s623 = vertex->xyx . frustrum[3]
-					"mfv	%0, S620\n"			// out1 = s620
-					"mfv	%1, S621\n"			// out2 = s621
-					"mfv	%2, S622\n"			// out3 = s622
-					"mfv	%3, S623\n"			// out4 = s623
-					: "=r"(out1), "=r"(out2), "=r"(out3), "=r"(out4) : "m"(*vertex->xyz)
-				);
-			
-				// Should be possible to move this within the VFPU code and just check one value here
-				if ((out1 < 0.0f) || (out2 < 0.0f) || (out3 < 0.0f) || (out4 < 0.0f))
-				{
-					return true;
-				}
-			}
-
-			// This polygon is all inside the frustum.
-			return false;
-		}
-
-		static inline glvert_t calculate_intersection(const plane_type& plane, const glvert_t& v1, const glvert_t& v2)
-		{
-			// Work out the difference between the vertices.
-			const glvert_t delta =
-			{
-				{
-					v2.st[0] - v1.st[0],
-						v2.st[1] - v1.st[1]
-				},
-				{
-					v2.xyz[0] - v1.xyz[0],
-						v2.xyz[1] - v1.xyz[1],
-						v2.xyz[2] - v1.xyz[2]
-				}
-			};
-
-			// Horrible math.
-			const float top		= (plane.x * v1.xyz[0]) + (plane.y * v1.xyz[1]) + (plane.z * v1.xyz[2]) + plane.w;
-			const float bottom	= (plane.x * delta.xyz[0]) + (plane.y * delta.xyz[1]) + (plane.z * delta.xyz[2]);
-			const float time	= -top / bottom;
-#if CLIPPING_DEBUGGING
-			if (time < -0.001f || time > 1.001f)
-			{
-				Sys_Error("time out of range,\n\t%f,\n\tv1 (%f %f %f)\n\tv2 (%f %f %f)\n\tdelta (%f %f %f)",
-					time,
-					v1.xyz[0], v1.xyz[1], v1.xyz[2],
-					v2.xyz[0], v2.xyz[1], v2.xyz[2],
-					delta.xyz[0], delta.xyz[1], delta.xyz[2]
-				);
-			}
-#endif
-
-			// Interpolate a new vertex.
-			const glvert_t	v =
-			{
-				{
-					v1.st[0] + time * delta.st[0],
-						v1.st[1] + time * delta.st[1]
-				},
-				{
-					v1.xyz[0] + time * delta.xyz[0],
-						v1.xyz[1] + time * delta.xyz[1],
-						v1.xyz[2] + time * delta.xyz[2]
-				},
-			};
-
-			return v;
+			int res;
+			__asm__ volatile (
+				".set		push\n"					// save assembler option
+				".set		noreorder\n"			// suppress reordering
+				"move		$8,   %1\n"				// $8 = &vertices[0]
+				"move		$9,   %2\n"				// $9 = vertex_count
+				"li			$10,  20\n"				// $10 = 20( sizeof(glvert_t) )
+				"mul		$10,  $10,   $9\n"		// $10 = $10 * $9
+				"addu		$10,  $10,   $8\n"		// $10 = $10 + $8
+			"0:\n"									// loop
+				"ulv.q		C610, 8($8)\n"			// Load vertex into register skip tex cord 8 byte
+				"vone.s		S613\n"					// Now set the 4th entry to be 1 as that is just random
+				"vdot.q		S620, C700, C610\n"		// S620 = v[i] * frustrum[0]
+				"vdot.q		S621, C710, C610\n"		// S621 = v[i] * frustrum[1]
+				"vdot.q		S622, C720, C610\n"		// S622 = v[i] * frustrum[2]
+				"vdot.q		S623, C730, C610\n"		// S623 = v[i] * frustrum[3]
+				"vzero.q	C610\n"					// C610 = [0.0f, 0.0f, 0.0f. 0.0f]
+				"addiu		%0,   $0, 1\n"			// res = 1
+				"vcmp.q		LT,   C620, C610\n"		// S620 < 0.0f || S621 < 0.0f || S622 < 0.0f || S623 < 0.0f
+				"bvt		4,    1f\n"				// if ( CC[4] == 1 ) jump to exit
+				"addiu		$8,   $8,   20\n"		// $8 = $8 + 20( sizeof(glvert_t) )
+				"bne		$10,  $8,   0b\n"		// if ( $9 != 0 ) jump to loop
+				"move		%0,   $0\n"				// res = 0
+			"1:\n"									// exit
+				".set		pop\n"					// Restore assembler option
+				:	"=r"(res)
+				:	"r"(vertices), "r"(vertex_count)
+				:	"$8", "$9", "$10"
+			);
+			return (res == 1) ? true : false;
 		}
 
 		// Clips a polygon against a plane.
@@ -337,12 +328,13 @@ namespace quake
 			glvert_t*		clipped_vertex	= clipped_vertices;
 			do
 			{
-				// Check both nodal values, s and p. If the point values are:
-				const bool s_inside = point_in_front_of_plane(s->xyz, plane);
-				const bool p_inside = point_in_front_of_plane(p->xyz, plane);
-				if (s_inside)
+				// Check both nodal values, s and p. If the point values are:		
+				const float s_val = (plane.x * s->xyz[0]) + (plane.y * s->xyz[1]) + (plane.z * s->xyz[2]) + plane.w;
+				const float p_val = (plane.x * p->xyz[0]) + (plane.y * p->xyz[1]) + (plane.z * p->xyz[2]) + plane.w;
+				
+				if (s_val > 0.0f)
 				{
-					if (p_inside)
+					if (p_val > 0.0f)
 					{
 						// 1. Inside-inside, append the second node, p.
 						*clipped_vertex++ = *p;
@@ -351,17 +343,28 @@ namespace quake
 					{
 						// 2. Inside-outside, compute and append the
 						// intersection, i of edge sp with the clipping plane.
-						*clipped_vertex++ = calculate_intersection(plane, *s, *p);
+						clipped_vertex->st[0]  = s->st[0]  + ((s_val / (s_val - p_val)) * (p->st[0] - s->st[0]));
+						clipped_vertex->st[1]  = s->st[1]  + ((s_val / (s_val - p_val)) * (p->st[1] - s->st[1]));
+						clipped_vertex->xyz[0] = s->xyz[0] + ((s_val / (s_val - p_val)) * (p->xyz[0] - s->xyz[0]));
+						clipped_vertex->xyz[1] = s->xyz[1] + ((s_val / (s_val - p_val)) * (p->xyz[1] - s->xyz[1]));
+						clipped_vertex->xyz[2] = s->xyz[2] + ((s_val / (s_val - p_val)) * (p->xyz[2] - s->xyz[2]));
+						clipped_vertex++;
 					}
 				}
 				else
 				{
-					if (p_inside)
+					if (p_val > 0.0f)
 					{
 						// 4. Outside-inside, compute and append the
 						// intersection i of edge sp with the clipping plane,
 						// then append the second node p. 
-						*clipped_vertex++ = calculate_intersection(plane, *s, *p);
+						clipped_vertex->st[0]  = s->st[0]  + ((s_val / (s_val - p_val)) * (p->st[0] - s->st[0]));
+						clipped_vertex->st[1]  = s->st[1]  + ((s_val / (s_val - p_val)) * (p->st[1] - s->st[1]));
+						clipped_vertex->xyz[0] = s->xyz[0] + ((s_val / (s_val - p_val)) * (p->xyz[0] - s->xyz[0]));
+						clipped_vertex->xyz[1] = s->xyz[1] + ((s_val / (s_val - p_val)) * (p->xyz[1] - s->xyz[1]));
+						clipped_vertex->xyz[2] = s->xyz[2] + ((s_val / (s_val - p_val)) * (p->xyz[2] - s->xyz[2]));
+						clipped_vertex++;
+
 						*clipped_vertex++ = *p;
 					}
 					else

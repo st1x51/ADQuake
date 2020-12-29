@@ -388,23 +388,10 @@ loc0:
 				for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
 				{
 					scale = (float) d_lightstylevalue[surf->styles[maps]] * 1.0 / 256.0;
-
-					r00 += TextureToTexGamma((float) lightmap[      0]) * scale;
-					g00 += TextureToTexGamma((float) lightmap[      1]) * scale;
-					b00 += TextureToTexGamma((float) lightmap[      2]) * scale;
-
-					r01 += TextureToTexGamma((float) lightmap[      3]) * scale;
-					g01 += TextureToTexGamma((float) lightmap[      4]) * scale;
-					b01 += TextureToTexGamma((float) lightmap[      5]) * scale;
-
-					r10 += TextureToTexGamma((float) lightmap[line3+0]) * scale;
-					g10 += TextureToTexGamma((float) lightmap[line3+1]) * scale;
-					b10 += TextureToTexGamma((float) lightmap[line3+2]) * scale;
-
-					r11 += TextureToTexGamma((float) lightmap[line3+3]) * scale;
-					g11 += TextureToTexGamma((float) lightmap[line3+4]) * scale;
-					b11 += TextureToTexGamma((float) lightmap[line3+5]) * scale;
-
+					r00 += (float) lightmap[      0] * scale;g00 += (float) lightmap[      1] * scale;b00 += (float) lightmap[2] * scale;
+					r01 += (float) lightmap[      3] * scale;g01 += (float) lightmap[      4] * scale;b01 += (float) lightmap[5] * scale;
+					r10 += (float) lightmap[line3+0] * scale;g10 += (float) lightmap[line3+1] * scale;b10 += (float) lightmap[line3+2] * scale;
+					r11 += (float) lightmap[line3+3] * scale;g11 += (float) lightmap[line3+4] * scale;b11 += (float) lightmap[line3+5] * scale;
 					lightmap += ((surf->extents[0]>>4)+1) * ((surf->extents[1]>>4)+1)*3; // LordHavoc: *3 for colored lighting
 				}
 
