@@ -61,7 +61,81 @@ void QuaternionGLMatrix(float x, float y, float z, float w, vec4_t *GLM)
     GLM[1][2] = 2 * y * z - 2 * w * x;
     GLM[2][2] = 1 - 2 * x * x - 2 * y * y;
 }
+void QuaternionGLAnglePSPVFPU(ScePspQuatMatrix *res, float x, float y, float z)
+{
+	__asm__ volatile (
+		/*
+		float	yaw = angles[2] * 0.5;
+		float	pitch = angles[1] * 0.5;
+		float	roll = angles[0] * 0.5; 
+		C002 = roll
+		C001 = pitch
+		C000 = yaw
+		*/
+		"mtv	%1, S000\n\t"				// S000 = x
+		"mtv	%2, S001\n\t"				// S001 = y
+		"mtv	%3, S002\n\t"				// S002 = z
+		"vfim.s S010, 0.5\n\t"				// S010 = 0.5
+		"vscl.t C000, C000, S010\n\t"		// x *= 0.5, y *= 0.5, z *= 0.5
+		/*
+		C012 = sin(roll)  = sinr = ?? z ?? =  0.998472 = x
+		C011 = sin(pitch) = sinp = ?? y ?? = -0.571133 = y
+		C010 = sin(yaw)   = siny = ?? x ?? = -0.997144 = z
+		 */
+		"vcst.s  S003, VFPU_2_PI\n\t"
+		"vscl.t  C010, C000, S003\n\t"
+		"vsin.t  C010, C010\n"
+		/*
+		C022 = cos(roll)  = cosr = ?? z ?? =  0.055265 = x
+		C021 = cos(pitch) = cosp = ?? y ?? =  0.820857 = y
+		C020 = cos(yaw)   = cosy = ?? x ?? =  0.075520 = z
+		 */
+		"vscl.t  C020, C000, S003\n\t"
+		"vcos.t  C020, C020\n"
+		/*
+		quaternion[0] = ( [sinr] * [cosp] * [cosy] ) - ( [cosr] * [sinp] * [siny] );  ( 0,0618963982076621 -  0,0314735194170603 )
+		quaternion[1] = ( [sinp] * [cosr] * [cosy] ) + ( [cosp] * [sinr] * [siny] );  (-0,0023836879993024‬ + -0,8172619451056806‬ )
+		quaternion[2] = ( [siny] * [cosr] * [cosp] ) - ( [cosy] * [sinr] * [sinp] );  (-0,0452351006300281 - -0,0430660585187635‬ )
+		quaternion[3] = ( [cosr] * [cosp] * [cosy] ) + ( [sinr] * [sinp] * [siny] );  ( 0,0034259392821696‬ +  0,5686316453341357 )
+		                  0        1        2            3        4        5
+		*/
 
+		/*
+										   C000
+		 0,998472 * 0,820857 * 0,075520 =  0,0618963982076621 = x
+		-0,571133 * 0,055265 * 0,075520 = -0,0023836879993024 = y
+		-0,997144 * 0,055265 * 0,820857 = -0,0452351006300281 = z
+		 0,055265 * 0,820857 * 0,075520 =  0,0034259392821696 = w
+		 */
+		"vmul.q C000, C010[x,y,z,1], C020[1,1,1,x]\n"	// 0
+		"vmul.q C000, C000, 		 C020[y,x,x,y]\n"	// 1
+		"vmul.q C000, C000, 		 C020[z,z,y,z]\n"	// 2
+		/*
+											 C030
+		 0,055265 * -0,571133 * -0,997144 =  0,0314735194170603 = x
+		 0,820857 *  0,998472 * -0,997144 = -0,8172619451056806 = y
+		 0,075520 *  0,998472 * -0,571133 = -0,0430660585187635 = z
+		 0,998472 * -0,571133 * -0,997144 =  0,5686316453341357 = w
+		 */
+		"vmul.q C030, C010[1,1,1,x], C020[x,y,z,1]\n"	// 3
+		"vmul.q C030, C030, 		 C010[y,x,x,y]\n"	// 4
+		"vmul.q C030, C030, 		 C010[z,z,y,z]\n"	// 5
+		/*
+		 0,0618963982076621 -  0,0314735194170603 =  0,0304228787906018‬
+		-0,0023836879993024‬ + -0,8172619451056806‬ = -0,819645633104983‬
+		-0,0452351006300281 - -0,0430660585187635‬ = -0,0021690421112646
+		 0,0034259392821696‬ +  0,5686316453341357 =  0,5720575846163053
+		 */
+		"vadd.q C020, C000[0,y,0,w], C030[0,y,0,w]\n"	// add
+		"vsub.q C000, C000[x,0,z,0], C030[x,0,z,0]\n"	// sub
+		"vadd.q C020, C020, C000[x,0,z,0]\n"
+		
+		//result
+		"usv.q  C020, %0\n\t"
+		:"=m"(*res) : "r"(x), "r"(y), "r"(z));
+
+	//vfpu_quaternion_normalize(res);
+}
 /*
  =======================================================================================================================
     QuaternionGLAngle - Convert a GL angle to a quaternion matrix
@@ -69,7 +143,7 @@ void QuaternionGLMatrix(float x, float y, float z, float w, vec4_t *GLM)
  */
 void QuaternionGLAngle(const vec3_t angles, vec4_t quaternion)
 {
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+	/*
     float	yaw = angles[2] * 0.5;
     float	pitch = angles[1] * 0.5;
     float	roll = angles[0] * 0.5;
@@ -88,12 +162,13 @@ void QuaternionGLAngle(const vec3_t angles, vec4_t quaternion)
     float	sinr = sin(roll);
     float	cosr = cos(roll);
 	#endif
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     quaternion[0] = sinr * cosp * cosy - cosr * sinp * siny;
     quaternion[1] = cosr * sinp * cosy + sinr * cosp * siny;
     quaternion[2] = cosr * cosp * siny - sinr * sinp * cosy;
     quaternion[3] = cosr * cosp * cosy + sinr * sinp * siny;
+	*/
+	QuaternionGLAnglePSPVFPU((ScePspQuatMatrix*)quaternion, angles[0], angles[1], angles[2]);
 }
 
 
@@ -115,8 +190,11 @@ vec3_t			g_lightcolor;
 int				g_smodels_total;				// cookie
 vec3_t          m_angles;
 
-void GL_Draw_HL_AliasFrame(short *order, vec3_t *transformed, float tex_w, float tex_h, float				*lv);
-void GL_Draw_HL_AliasChrome(short *order, vec3_t *transformed, float tex_w, float tex_h, float				*lv);
+/* Prototype func alias */
+void (*ALIAS_FUNC)(short*, vec3_t*, float, float, float*);
+
+void GL_Draw_HL_AliasFrame(short *order, vec3_t *transformed, float tex_w, float tex_h, float* lv);
+void GL_Draw_HL_AliasChrome(short *order, vec3_t *transformed, float tex_w, float tex_h, float* lv);
 
 /*
 =======================================================================================================================
@@ -650,7 +728,7 @@ void R_DrawHLModel(entity_t	*curent)
 
     sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
     sceGuShadeModel(GU_SMOOTH);
-	sceGuEnable(GU_FOG);
+
 	//Con_DPrintf("%s %i\n", sequence->name, model.frame);
 
     sceGumPushMatrix();
@@ -757,37 +835,32 @@ void R_DrawHLModel(entity_t	*curent)
             float			tex_w = 1.0f / model.textures[skins[mesh->skinindex]].w;
             float			tex_h = 1.0f / model.textures[skins[mesh->skinindex]].h;
             int             flags = model.textures[skins[mesh->skinindex]].flags;
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 			
-		    for (int c = 0; c < mesh->numnorms; c++, lv += 3, norms++, nbone++)
-			{
+			ALIAS_FUNC = (model.textures[skins[mesh->skinindex]].flags & STUDIO_NF_CHROME) ? &GL_Draw_HL_AliasChrome : &GL_Draw_HL_AliasFrame;
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/*
+			for (int c = 0; c < mesh->numnorms; c++, lv += 3, ++norms, ++nbone)
+			{	
                 Lighting (&lv_tmp, *nbone, flags, (float *)norms);
 				// FIX: move this check out of the inner loop
 				if (flags & STUDIO_NF_CHROME)
 				 	Chrome(g_chrome[(float (*)[3])lv - g_pvlightvalues], *nbone, (float *)norms );
 
-			    lv[0] = lv_tmp * g_lightcolor[0];
-			    lv[1] = lv_tmp * g_lightcolor[1];
-			    lv[2] = lv_tmp * g_lightcolor[2];
+			    lv[0] = g_lightcolor[0];
+			    lv[1] = g_lightcolor[1];
+			    lv[2] = g_lightcolor[2];
 			}
-			
-			if (model.textures[skins[mesh->skinindex]].flags & STUDIO_NF_CHROME)
-		    {
-   			    GL_Bind(model.textures[skins[mesh->skinindex]].i);
-				GL_Draw_HL_AliasChrome((short *) ((byte *) model.header + mesh->index), transformed, tex_w, tex_h, lv);
-			}
-		    else
-		    {
-                GL_Bind(model.textures[skins[mesh->skinindex]].i);
-				GL_Draw_HL_AliasFrame((short *) ((byte *) model.header + mesh->index), transformed, tex_w, tex_h, lv);
-			}
+*/
+			//R_NormsHLUpdate(mesh, norms, nbone, flags, lv);
+
+			GL_Bind(model.textures[skins[mesh->skinindex]].i);
+			ALIAS_FUNC((short *) ((byte *) model.header + mesh->index), transformed, tex_w, tex_h, lv);
 		}
     }
     sceGuShadeModel(GU_SMOOTH);
     sceGumPopMatrix();
     sceGumUpdateMatrix();
     sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
-	sceGuDisable(GU_FOG);
 }
 
 /*
@@ -798,6 +871,18 @@ void R_DrawHLModel(entity_t	*curent)
 void GL_Draw_HL_AliasFrame(short *order, vec3_t *transformed, float tex_w, float tex_h, float				*lv)
 {
     int count = 0;
+	float       r,g,b;
+	
+	r = lightcolor[0];
+	g = lightcolor[1];
+	b = lightcolor[2];
+
+	 if(r > 1)
+		r = 1;
+	 if(g > 1)
+		g = 1;
+	 if(b > 1)
+		b = 1;
     while (1)
 	{
         count = *order++;
@@ -836,21 +921,13 @@ void GL_Draw_HL_AliasFrame(short *order, vec3_t *transformed, float tex_w, float
 			out[vertex_index].u = order[2] * tex_w;
 			out[vertex_index].v = order[3] * tex_h;
 			order += 4;
-
-			lv = g_pvlightvalues[order[1]];
-			//color clamp
-			for(int i = 0; i < 3; i++)
-			{
-				if(lv[i] > 1)
-				   lv[i] = 1;
-
-				if(lv[i] < 0)
-				   lv[i] = 0;
-            }
+			
 			out[vertex_index].x = verts[0];
             out[vertex_index].y = verts[1];
             out[vertex_index].z = verts[2];
-            out[vertex_index].color = GU_COLOR(lv[0], lv[1], lv[2], 1.0f);
+            out[vertex_index].color = GU_COLOR(r, g, b, 1.0f);
+			
+			
 		}
         if(r_showtris.value)
 		{
