@@ -83,25 +83,25 @@ namespace quake
 
 		static inline void calculate_frustum(const ScePspFMatrix4& clip, frustum_t* frustum)
 		{
-			__asm__ volatile (
+			__asm__ (
 				".set		push\n"					// save assembler option
 				".set		noreorder\n"			// suppress reordering
 		#if CLIP_NEAR_FAR
-				"lv.q		C000,  0(%6)\n"			// C000 = matrix->x
-				"lv.q		C010, 16(%6)\n"			// C010 = matrix->y
-				"lv.q		C020, 32(%6)\n"			// C020 = matrix->z
-				"lv.q		C030, 48(%6)\n"			// C030 = matrix->w
+				"lv.q		C000,  0(%6)\n"			// C000 = clip->x
+				"lv.q		C010, 16(%6)\n"			// C010 = clip->y
+				"lv.q		C020, 32(%6)\n"			// C020 = clip->z
+				"lv.q		C030, 48(%6)\n"			// C030 = clip->w
 		#else
-				"lv.q		C000,  0(%4)\n"			// C000 = matrix->x
-				"lv.q		C010, 16(%4)\n"			// C010 = matrix->y
-				"lv.q		C020, 32(%4)\n"			// C020 = matrix->z
-				"lv.q		C030, 48(%4)\n"			// C030 = matrix->w
+				"lv.q		C000,  0(%4)\n"			// C000 = clip->x
+				"lv.q		C010, 16(%4)\n"			// C010 = clip->y
+				"lv.q		C020, 32(%4)\n"			// C020 = clip->z
+				"lv.q		C030, 48(%4)\n"			// C030 = clip->w
 		#endif
 				/* Extract the BOTTOM plane */
-				"vadd.s		S100, S003, S001\n"		// S100 = matrix->x.w + matrix->x.y
-				"vadd.s		S101, S013, S011\n"		// S101 = matrix->y.w + matrix->y.y
-				"vadd.s		S102, S023, S021\n"		// S102 = matrix->z.w + matrix->z.y
-				"vadd.s		S103, S033, S031\n"		// S103 = matrix->w.w + matrix->w.y
+				"vadd.s		S100, S003, S001\n"		// S100 = clip->x.w + clip->x.y
+				"vadd.s		S101, S013, S011\n"		// S101 = clip->y.w + clip->y.y
+				"vadd.s		S102, S023, S021\n"		// S102 = clip->z.w + clip->z.y
+				"vadd.s		S103, S033, S031\n"		// S103 = clip->w.w + clip->w.y
 				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
 				"vzero.s	S111\n"					// S111 = 0
 				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
@@ -110,10 +110,10 @@ namespace quake
 				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
 				"sv.q		C100, %0\n"				// Store plane from register
 				/* Extract the LEFT plane */
-				"vadd.s		S100, S003, S000\n"		// S100 = matrix->x.w + matrix->x.x
-				"vadd.s		S101, S013, S010\n"		// S101 = matrix->y.w + matrix->y.x
-				"vadd.s		S102, S023, S020\n"		// S102 = matrix->z.w + matrix->z.x
-				"vadd.s		S103, S033, S030\n"		// S103 = matrix->w.w + matrix->w.x
+				"vadd.s		S100, S003, S000\n"		// S100 = clip->x.w + clip->x.x
+				"vadd.s		S101, S013, S010\n"		// S101 = clip->y.w + clip->y.x
+				"vadd.s		S102, S023, S020\n"		// S102 = clip->z.w + clip->z.x
+				"vadd.s		S103, S033, S030\n"		// S103 = clip->w.w + clip->w.x
 				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
 				"vzero.s	S111\n"					// S111 = 0
 				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
@@ -122,10 +122,10 @@ namespace quake
 				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
 				"sv.q		C100, %1\n"				// Store plane from register
 				/* Extract the RIGHT plane */
-				"vsub.s		S100, S003, S000\n"		// S100 = matrix->x.w - matrix->x.x
-				"vsub.s		S101, S013, S010\n"		// S101 = matrix->y.w - matrix->y.x
-				"vsub.s		S102, S023, S020\n"		// S102 = matrix->z.w - matrix->z.x
-				"vsub.s		S103, S033, S030\n"		// S103 = matrix->w.w - matrix->w.x	
+				"vsub.s		S100, S003, S000\n"		// S100 = clip->x.w - clip->x.x
+				"vsub.s		S101, S013, S010\n"		// S101 = clip->y.w - clip->y.x
+				"vsub.s		S102, S023, S020\n"		// S102 = clip->z.w - clip->z.x
+				"vsub.s		S103, S033, S030\n"		// S103 = clip->w.w - clip->w.x	
 				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
 				"vzero.s	S111\n"					// S111 = 0
 				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
@@ -134,10 +134,10 @@ namespace quake
 				"vscl.q		C100[-1:1,-1:1,-1:1,-1:1], C100, S110\n"	// C100 = C100 * S110
 				"sv.q		C100, %2\n"				// Store plane from register	
 				/* Extract the TOP plane */
-				"vsub.s		S100, S003, S001\n"		// S100 = matrix->x.w - matrix->x.y
-				"vsub.s		S101, S013, S011\n"		// S101 = matrix->y.w - matrix->y.y
-				"vsub.s		S102, S023, S021\n"		// S102 = matrix->z.w - matrix->z.y
-				"vsub.s		S103, S033, S031\n"		// S103 = matrix->w.w - matrix->w.y	
+				"vsub.s		S100, S003, S001\n"		// S100 = clip->x.w - clip->x.y
+				"vsub.s		S101, S013, S011\n"		// S101 = clip->y.w - clip->y.y
+				"vsub.s		S102, S023, S021\n"		// S102 = clip->z.w - clip->z.y
+				"vsub.s		S103, S033, S031\n"		// S103 = clip->w.w - clip->w.y	
 				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
 				"vzero.s	S111\n"					// S111 = 0
 				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
@@ -147,10 +147,10 @@ namespace quake
 				"sv.q		C100, %3\n"				// Store plane from register	
 		#if CLIP_NEAR_FAR
 				/* Extract the NEAR plane */
-				"vadd.s		S100, S003, S002\n"		// S100 = matrix->x.w + matrix->x.z
-				"vadd.s		S101, S013, S012\n"		// S101 = matrix->y.w + matrix->y.z
-				"vadd.s		S102, S023, S022\n"		// S102 = matrix->z.w + matrix->z.z
-				"vadd.s		S103, S033, S032\n"		// S103 = matrix->w.w + matrix->w.z	
+				"vadd.s		S100, S003, S002\n"		// S100 = clip->x.w + clip->x.z
+				"vadd.s		S101, S013, S012\n"		// S101 = clip->y.w + clip->y.z
+				"vadd.s		S102, S023, S022\n"		// S102 = clip->z.w + clip->z.z
+				"vadd.s		S103, S033, S032\n"		// S103 = clip->w.w + clip->w.z	
 				"vdot.q		S110, C100, C100\n"		// S110 = S100*S100 + S101*S101 + S102*S102 + S103*S103
 				"vzero.s	S111\n"					// S111 = 0
 				"vcmp.s		EZ,   S110\n"			// CC[0] = ( S110 == 0.0f )
@@ -202,7 +202,7 @@ namespace quake
 			sceGumMatrixMode(GU_MODEL);
 
 			// Combine the two matrices (multiply projection by view).
-			math::multiply(view, proj, &projection_view_matrix);
+			gumMultMatrix(&projection_view_matrix, &proj, &view);
 
 			// Calculate and cache the clipping frustum.
 			calculate_frustum(projection_view_matrix, &projection_view_frustum);
@@ -235,7 +235,7 @@ namespace quake
 
 			// Combine the matrices (multiply projection-view by model).
 			ScePspFMatrix4	projection_view_model_matrix;
-			math::multiply(model_matrix, projection_view_matrix, &projection_view_model_matrix);
+			gumMultMatrix(&projection_view_model_matrix, &projection_view_matrix, &model_matrix);
 
 			// Calculate the clipping frustum.
 			calculate_frustum(projection_view_model_matrix, &clipping_frustum);
@@ -279,7 +279,7 @@ namespace quake
 		bool is_clipping_required(const struct glvert_s* vertices, std::size_t vertex_count)
 		{
 			int res;
-			__asm__ volatile (
+			__asm__ (
 				".set		push\n"					// save assembler option
 				".set		noreorder\n"			// suppress reordering
 				"move		$8,   %1\n"				// $8 = &vertices[0]
@@ -319,7 +319,7 @@ namespace quake
 			glvert_t* const clipped_vertices,
 			std::size_t* const clipped_vertex_count)
 		{
-			__asm__ volatile (
+			__asm__ (
 				".set		push\n"					// save assembler option
 				".set		noreorder\n"			// suppress reordering
 				"move		$8,   %1\n"				// $8 = uv[0] is S
